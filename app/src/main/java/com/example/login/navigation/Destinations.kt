@@ -32,6 +32,10 @@ sealed class Destinations(
         listOf(
             navArgument("email"){ type = NavType.StringType },
         ))
+    object Spells: Destinations("spells",
+        listOf(
+            navArgument("email"){ type = NavType.StringType },
+        ))
     object Admin: Destinations("admin", emptyList())
     object NewsCreator: Destinations("news_creator", emptyList())
 

@@ -2,6 +2,7 @@ package com.example.login.presentation.spells
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.login.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -10,6 +11,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class SpellsViewModel: ViewModel() {
+    private val _email = MutableStateFlow("")
+    val email: StateFlow<String> = _email.asStateFlow()
+    fun setEmail(email: String) {
+        _email.value = email
+    }
     private val _spells = MutableStateFlow<List<SpellsState>>(emptyList())
     val spells: StateFlow<List<SpellsState>> = _spells.asStateFlow()
 
@@ -20,12 +26,11 @@ class SpellsViewModel: ViewModel() {
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                val cartasCargadas = withContext(Dispatchers.IO) {
-                    leerCSVDesdeAssets(context)
+                val spellsCargadas = withContext(Dispatchers.IO) {
+                    readSpells(context) // Cambiar por esta función
                 }
-                _spells.value = cartasCargadas
+                _spells.value = spellsCargadas
             } catch (e: Exception) {
-                // Manejar error
                 e.printStackTrace()
             } finally {
                 _isLoading.value = false
@@ -33,11 +38,11 @@ class SpellsViewModel: ViewModel() {
         }
     }
 
-    private fun leerCSVDesdeAssets(context: android.content.Context): List<SpellsState> {
+    private fun readSpells(context: android.content.Context): List<SpellsState> {
         val spells = mutableListOf<SpellsState>()
 
         try {
-            context.assets.open("spells.csv").use { inputStream ->
+            context.resources.openRawResource(R.raw.spells).use { inputStream ->
                 inputStream.bufferedReader().useLines { lines ->
                     var isFirstLine = true
                     lines.forEach { line ->

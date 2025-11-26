@@ -25,6 +25,8 @@ import com.example.login.presentation.dice.DiceScreen
 import com.example.login.presentation.dice.DiceViewModel
 import com.example.login.presentation.registation.RegisterViewModel
 import com.example.login.presentation.registation.RegistrationScreen
+import com.example.login.presentation.spells.SpellsScreen
+import com.example.login.presentation.spells.SpellsViewModel
 import com.example.login.presentation.users.UsuarioScreen
 import com.google.firebase.auth.FirebaseAuth
 
@@ -47,6 +49,7 @@ fun AppNavigation() {
             addAdmin(navController)
             addNewsCreator(navController)
             addDice(navController)
+            addSpells(navController)
 
         }
     }
@@ -140,6 +143,9 @@ fun NavGraphBuilder.addMenu(navController: NavHostController) {
             onNavigateToHome = {
                 navController.navigate(Destinations.Menu.route+"/$emailArg")
             },
+            onNavigateToSpell = {
+                navController.navigate(Destinations.Spells.route+"/$emailArg")
+            },
             onBack = {
                 navController.popBackStack()
             },
@@ -182,9 +188,29 @@ fun NavGraphBuilder.addCharacterList(navController: NavHostController) {
                 onNavigateToHome = {navController.navigate(Destinations.Menu.route+"/$emailArg")},
                 onNavigateToData = { personajeId -> navController.navigate("char_data/$personajeId")},
                 onNavigateToDice = {navController.navigate(Destinations.Dice.route+"/$emailArg")},
+                onNavigateToSpells = {navController.navigate(Destinations.Spells.route+"/$emailArg")},
                 onBack = { navController.popBackStack() })
     }
 }
+fun NavGraphBuilder.addSpells(navController: NavHostController) {
+    composable(route = Destinations.Spells.route+"/{email}",
+        arguments = Destinations.Spells.arguments)
+    { backStackEntry ->
+        val viewModel: SpellsViewModel = hiltViewModel()
+        val emailArg = backStackEntry.arguments?.getString("email") ?: ""
+
+        LaunchedEffect(emailArg) {
+            viewModel.setEmail(emailArg)
+        }
+        SpellsScreen(email = emailArg,
+            onNavigateToList = {navController.navigate(Destinations.Character.route+"/$emailArg")},
+            onNavigateToUser = {navController.navigate(Destinations.User.route+"/$emailArg")},
+            onNavigateToHome = {navController.navigate(Destinations.Menu.route+"/$emailArg")},
+            onNavigateToDice = {navController.navigate(Destinations.Dice.route+"/$emailArg")},
+            onBack = { navController.popBackStack() })
+    }
+}
+
 fun NavGraphBuilder.addUserScreen(navController: NavHostController) {
     composable(route = Destinations.User.route+"/{email}",
         arguments = Destinations.User.arguments) {

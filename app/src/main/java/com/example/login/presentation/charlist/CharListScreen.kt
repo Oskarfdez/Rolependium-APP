@@ -26,6 +26,7 @@ fun PersonajeListScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToData: (String) -> Unit,
     onNavigateToDice: () -> Unit,
+    onNavigateToSpells: () -> Unit,
     onBack: () -> Unit
 ) {
     val viewModel: CharListViewModel = hiltViewModel()

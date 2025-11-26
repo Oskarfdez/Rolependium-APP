@@ -34,18 +34,19 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.login.Data.DataViewModel
 
 
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter", "ViewModelConstructorInComposable")
 @Composable
 fun MenuScreen(
     onNavigateToDice: () -> Unit,
     onNavigateToList: () -> Unit,
     onNavigateToUser: () -> Unit,
     onNavigateToHome: () -> Unit,
+    onNavigateToSpell: () -> Unit,
     onBack: () -> Unit,
     email: String
 ) {
     Scaffold(
-        topBar = { TopBar(onNavigateToUser,onBack) },
+        topBar = { TopBar(onNavigateToSpell,onBack) },
         bottomBar = {BottomBar(modifier = Modifier, onNavigateToDice, onNavigateToList,onNavigateToHome)}
     ) {
         Column {
@@ -128,5 +129,5 @@ fun NewsList(viewModel: DataViewModel) {
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-    MenuScreen(onNavigateToDice = {}, onNavigateToList = {}, onNavigateToUser = {}, onNavigateToHome = {}, onBack = {}, email = "")
+    MenuScreen(onNavigateToDice = {}, onNavigateToList = {}, onNavigateToUser = {}, onNavigateToHome = {}, onBack = {}, onNavigateToSpell = {}, email = "")
 }
