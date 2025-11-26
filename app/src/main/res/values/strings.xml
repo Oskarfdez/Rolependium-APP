@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">ROLEPENDIUM</string>
+    <string name="error_input_empty">Los campos no deben de estar vacíos</string>
+    <string name="error_not_a_valid_email">Introduce un E-Mail válido</string>
+    <string name="error_not_a_valid_phone_number">Introduce un telefono valido</string>
+    <string name="error_incorrectly_repeated_password">Las contraseñas no coinciden</string>
+    <string name="error_invalid_credentials">El E-Mail o contraseña no coinciden</string>
+    <string name="error_registration_failed">Registro fallido</string>
+    <string name="error_autentication">Error de autenticación</string>
+    <string name="success_registration">Registro exitoso</string>
+    <string name="success_login">Sesion iniciada</string>
+    <string name="error_unknown">ERROR DESCONOCIDO</string>
+</resources>
