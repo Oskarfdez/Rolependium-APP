@@ -58,7 +58,7 @@ fun EventDialog(
             // Coloca el botón "Aceptar" para cerrar el diálogo
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()  // Hace que la fila ocupe todo el ancho disponible
+                    .fillMaxWidth()  // Hace que la fila ocupe el ancho disponible
                     .padding(8.dp),  // Padding alrededor de la fila de botones
                 horizontalArrangement = Arrangement.End  // Alinea el botón a la derecha
             ) {

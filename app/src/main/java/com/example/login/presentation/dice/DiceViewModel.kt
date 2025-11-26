@@ -12,8 +12,11 @@ import kotlin.random.Random
 class DiceViewModel : ViewModel() {
     private val _email = MutableStateFlow("")
     val email: StateFlow<String> = _email
-    fun setEmail(email: String) {
-        _email.value = email
+
+    fun setEmail(newEmail: String) {
+        if (_email.value.isEmpty()) {
+            _email.value = newEmail
+        }
     }
 
     private val _diceValue = MutableStateFlow(1)
@@ -25,38 +28,35 @@ class DiceViewModel : ViewModel() {
     private val _rollHistory = MutableStateFlow<List<Int>>(emptyList())
     val rollHistory: StateFlow<List<Int>> = _rollHistory.asStateFlow()
 
-    // Variable para controlar el cooldown
-    private var canRoll = true
+    // Variable para controlar si puede iniciar una nueva tirada
+    private var canStartRoll = true
 
     fun rollDice() {
-        // Verificar si puede rodar (no está en cooldown y no está rodando)
-        if (!canRoll || _isRolling.value) {
+        // Verificar si puede iniciar una nueva tirada
+        if (!canStartRoll) {
             return
         }
 
         viewModelScope.launch {
-            // Activar cooldown
-            canRoll = false
+            // Bloquear nuevas tiradas
+            canStartRoll = false
             _isRolling.value = true
 
-            // Simular animación de rodado (5 cambios rápidos)
-            repeat(5) {
-                _diceValue.value = Random.nextInt(1, 21)
-                delay(80L)
-            }
+            // Esperar 2 segundos antes de mostrar el resultado
+            delay(2000L)
 
-            // Valor final
+            // Generar y mostrar el valor final
             val finalValue = Random.nextInt(1, 21)
             _diceValue.value = finalValue
 
             // Agregar al historial
             _rollHistory.value = _rollHistory.value + finalValue
 
+            // Finalizar el estado de rodado
             _isRolling.value = false
 
-            // Esperar 2 segundos antes de permitir otra tirada
-            delay(2000L)
-            canRoll = true
+            // Permitir nuevas tiradas nuevamente
+            canStartRoll = true
         }
     }
 
@@ -64,11 +64,8 @@ class DiceViewModel : ViewModel() {
         _rollHistory.value = emptyList()
     }
 
+    // Función para detectar agitación
     fun onShakeDetected() {
         rollDice()
-    }
-
-    fun canRoll(): Boolean {
-        return canRoll && !_isRolling.value
     }
 }
