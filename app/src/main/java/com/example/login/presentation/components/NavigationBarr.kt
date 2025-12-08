@@ -7,9 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessibilityNew
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -22,15 +19,17 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.navigation.NavController
+import androidx.compose.ui.res.painterResource
 import com.example.login.ui.theme.ROLERED
+import com.example.login.R
 
 
 @Composable
-    fun BottomBar(modifier: androidx.compose.ui.Modifier,
-                  onNavigateToDice: () -> Unit,
+    fun BottomBar(onNavigateToDice: () -> Unit,
                   onNavigateToList: () -> Unit,
-                  onNavigateToHome: () -> Unit) {
+                  onNavigateToHome: () -> Unit,
+                  onNavigateToSpells: () -> Unit
+    ) {
         NavigationBar(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
 
@@ -38,7 +37,7 @@ import com.example.login.ui.theme.ROLERED
             NavigationBarItem(
                 icon = {
                     Icon(
-                        imageVector = Icons.Default.Home,
+                        painter = painterResource(id = R.drawable.sword_24),
                         contentDescription = null
                     )
                 },
@@ -58,7 +57,7 @@ import com.example.login.ui.theme.ROLERED
                     )
                 },
                 label = {
-                    Text("Listado")
+                    Text("Personajes")
                 },
                 selected = false,
                 onClick = {
@@ -68,12 +67,27 @@ import com.example.login.ui.theme.ROLERED
             NavigationBarItem(
                 icon = {
                     Icon(
-                        imageVector = Icons.Default.Add,
+                        painter = painterResource(id = R.drawable.scroll_24),
                         contentDescription = null
                     )
                 },
                 label = {
-                    Text("Creador")
+                    Text("Conjuros")
+                },
+                selected = false,
+                onClick = {
+                    onNavigateToSpells()
+                }
+            )
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        painter = painterResource(id = R.drawable.dice_24),
+                        contentDescription = null
+                    )
+                },
+                label = {
+                    Text("Dado")
                 },
                 selected = false,
                 onClick = {

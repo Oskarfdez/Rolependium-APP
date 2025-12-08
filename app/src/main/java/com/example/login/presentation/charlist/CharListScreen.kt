@@ -40,10 +40,10 @@ fun PersonajeListScreen(
         topBar = { TopBar(onNavigateToUser,onBack)  },
         bottomBar = {
             BottomBar(
-                modifier = Modifier,
                 onNavigateToDice,
                 onNavigateToList,
-                onNavigateToHome
+                onNavigateToHome,
+                onNavigateToSpells
             )
         },
         floatingActionButton = {

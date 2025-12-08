@@ -5,67 +5,57 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlin.random.Random
+
 
 class DiceViewModel : ViewModel() {
-    private val _email = MutableStateFlow("")
-    val email: StateFlow<String> = _email
-
+    val email = MutableStateFlow("")
     fun setEmail(newEmail: String) {
-        if (_email.value.isEmpty()) {
-            _email.value = newEmail
-        }
+        email.value = newEmail
     }
+    // Estado para el valor actual del dado (sin modificador)
+    private val _diceValue = MutableStateFlow(0)
+    val diceValue: StateFlow<Int> = _diceValue
 
-    private val _diceValue = MutableStateFlow(1)
-    val diceValue: StateFlow<Int> = _diceValue.asStateFlow()
-
+    // Estado para saber si está rodando el dado
     private val _isRolling = MutableStateFlow(false)
-    val isRolling: StateFlow<Boolean> = _isRolling.asStateFlow()
+    val isRolling: StateFlow<Boolean> = _isRolling
 
-    private val _rollHistory = MutableStateFlow<List<Int>>(emptyList())
-    val rollHistory: StateFlow<List<Int>> = _rollHistory.asStateFlow()
+    // Historial de tiradas (almacena tanto el valor del dado como el modificador usado)
+    private val _rollHistory = MutableStateFlow<List<DiceRoll>>(emptyList())
+    val rollHistory: StateFlow<List<DiceRoll>> = _rollHistory
 
-    // Variable para controlar si puede iniciar una nueva tirada
-    private var canStartRoll = true
+    // Función para rodar el dado con un modificador específico
+    fun rollDice(modifier: Int = 0) {
+        if (_isRolling.value) return
 
-    fun rollDice() {
-        // Verificar si puede iniciar una nueva tirada
-        if (!canStartRoll) {
-            return
-        }
-
+        _isRolling.value = true
         viewModelScope.launch {
-            // Bloquear nuevas tiradas
-            canStartRoll = false
-            _isRolling.value = true
+            // Simular tiempo de rodado
+            repeat(10) {
+                _diceValue.value = (1..20).random()
+                delay(100L)
+            }
 
-            // Esperar 2 segundos antes de mostrar el resultado
-            delay(2000L)
-
-            // Generar y mostrar el valor final
-            val finalValue = Random.nextInt(1, 21)
+            // Resultado final
+            val finalValue = (1..20).random()
             _diceValue.value = finalValue
 
-            // Agregar al historial
-            _rollHistory.value = _rollHistory.value + finalValue
+            // Añadir al historial con el modificador usado en ese momento
+            val diceRoll = DiceRoll(
+                diceValue = finalValue,
+                modifier = modifier
+            )
 
-            // Finalizar el estado de rodado
+            _rollHistory.value = _rollHistory.value + diceRoll
+
             _isRolling.value = false
-
-            // Permitir nuevas tiradas nuevamente
-            canStartRoll = true
         }
     }
 
+    // Función para limpiar el historial
     fun clearHistory() {
         _rollHistory.value = emptyList()
-    }
-
-    // Función para detectar agitación
-    fun onShakeDetected() {
-        rollDice()
+        _diceValue.value = 0
     }
 }

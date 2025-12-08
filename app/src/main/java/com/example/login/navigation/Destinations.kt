@@ -12,15 +12,15 @@ sealed class Destinations(
 
     object Login: Destinations("login", emptyList())
     object Register: Destinations("register", emptyList())
-    object Menu: Destinations("menu",
+    object Sesion: Destinations("sesion",
         listOf(
             navArgument("email"){ type = NavType.StringType },
         ))
-    object Creator: Destinations("character",
+    object Creator: Destinations("creator",
         listOf(
             navArgument("email"){ type = NavType.StringType },
         ))
-    object Character: Destinations("register",
+    object Character: Destinations("character",
         listOf(
             navArgument("email"){ type = NavType.StringType },
         ))
@@ -37,7 +37,30 @@ sealed class Destinations(
             navArgument("email"){ type = NavType.StringType },
         ))
     object Admin: Destinations("admin", emptyList())
+
     object NewsCreator: Destinations("news_creator", emptyList())
+    object SpellInfo: Destinations("spell_info",
+        listOf(
+            navArgument("name"){ type = NavType.StringType },
+            navArgument("level"){ type = NavType.StringType },
+            navArgument("school"){ type = NavType.StringType },
+            navArgument("classes"){ type = NavType.StringType },
+            navArgument("description"){ type = NavType.StringType }
+        ))
+    object SesionCreator: Destinations("sesion_creator", emptyList())
+    object SesionData: Destinations("sesion_data",
+        listOf(
+        navArgument("email"){ type = NavType.StringType },
+        navArgument("id"){ type = NavType.StringType }
+    ))
 
 
 }
+
+
+
+
+
+
+
+

@@ -1,10 +1,10 @@
 package com.example.login.presentation.dice
-
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Refresh
@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -23,20 +24,32 @@ import com.example.login.presentation.components.BottomBar
 import com.example.login.presentation.components.TopBar
 import kotlinx.coroutines.delay
 
+// Data class para representar una tirada completa
+data class DiceRoll(
+    val diceValue: Int,
+    val modifier: Int,
+    val timestamp: Long = System.currentTimeMillis()
+) {
+    val total: Int get() = diceValue + modifier
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiceScreen(
+    email: String,
     onNavigateToList: () -> Unit,
     onNavigateToDice: () -> Unit,
     onNavigateToUser: () -> Unit,
     onNavigateToHome: () -> Unit,
-    onBack: () -> Unit,
-    email: String
-) { val viewModel: DiceViewModel = viewModel()
+    onNavigateToSpells: () -> Unit,
+    onBack: () -> Unit
+) {
+    val viewModel: DiceViewModel = viewModel()
     val context = LocalContext.current
+    var currentModifier by remember { mutableIntStateOf(0) }
 
-    // Estados observados del ViewModel
-    val diceValue by viewModel.diceValue.collectAsState()
+    // Estados observados del ViewModel (actualizados para usar DiceRoll)
+    val currentDiceValue by viewModel.diceValue.collectAsState()
     val isRolling by viewModel.isRolling.collectAsState()
     val rollHistory by viewModel.rollHistory.collectAsState()
 
@@ -62,7 +75,7 @@ fun DiceScreen(
         val sensorManager = context.getSystemService(SensorManager::class.java)
         val shakeDetector = ShakeDetector {
             if (canRoll) {
-                viewModel.rollDice()
+                viewModel.rollDice(currentModifier)
             }
         }
 
@@ -78,29 +91,27 @@ fun DiceScreen(
         topBar = { TopBar(onNavigateToUser,onBack)  },
         bottomBar = {
             BottomBar(
-                modifier = Modifier,
                 onNavigateToDice,
                 onNavigateToList,
-                onNavigateToHome
+                onNavigateToHome,
+                onNavigateToSpells
             )
         },
         floatingActionButton = {
             Row {
+                FloatingActionButton(
+                    onClick = { viewModel.clearHistory() },
+                    modifier = Modifier.padding(end = 8.dp),
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ) {
+                    Icon(Icons.Default.Clear, "Limpiar historial")
+                }
 
                 FloatingActionButton(
-                        onClick = { viewModel.clearHistory() },
-                        modifier = Modifier.padding(end = 8.dp),
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    ) {
-                        Icon(Icons.Default.Clear, "Limpiar historial")
-                    }
-
-                FloatingActionButton(
-                        onClick = { viewModel.rollDice() }
-                    ) {
-                        Icon(Icons.Default.Refresh, "Rodar dado")
-                    }
-
+                    onClick = { viewModel.rollDice(currentModifier) }
+                ) {
+                    Icon(Icons.Default.Refresh, "Rodar dado")
+                }
             }
         }
     ) { paddingValues ->
@@ -112,7 +123,6 @@ fun DiceScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-
             // Display del dado
             Card(
                 modifier = Modifier
@@ -140,13 +150,29 @@ fun DiceScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            // Mostrar el resultado total (dado + modificador actual)
+                            val displayValue = if (currentDiceValue > 0) {
+                                currentDiceValue + currentModifier
+                            } else {
+                                0
+                            }
+
                             Text(
-                                text = diceValue.toString(),
+                                text = displayValue.toString(),
                                 fontSize = 48.sp,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.primary
                             )
+
+                            // Mostrar desglose si hay modificador
+                            if (currentModifier != 0 && currentDiceValue > 0) {
+                                Text(
+                                    text = "($currentDiceValue + $currentModifier)",
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
 
                             if (cooldownRemaining > 0) {
                                 Text(
@@ -160,31 +186,29 @@ fun DiceScreen(
                 }
             }
 
-            // Información del estado
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (isRolling) {
-                    Text(
-                        text = "Rodando el dado...",
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    Text(
-                        text = "Agita el dispositivo o presiona el botón",
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+                Text(
+                    text = "Agita el dispositivo o presiona el botón",
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                TextField(
+                    value = currentModifier.toString(),
+                    onValueChange = {   currentModifier = it.toIntOrNull() ?: 0 },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    label = { Text("MODIFICADOR") },
+                    singleLine = true,
+                    modifier = Modifier.width(200.dp)
+                )
             }
 
-            // Historial de tiradas
             if (rollHistory.isNotEmpty()) {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().weight(4f),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -199,8 +223,8 @@ fun DiceScreen(
                             .height(150.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        items(rollHistory.reversed()) { roll ->
-                            HistoryItem(roll = roll)
+                        items(rollHistory.reversed()) { diceRoll ->
+                            HistoryItem(diceRoll = diceRoll)
                         }
                     }
                 }
@@ -210,7 +234,7 @@ fun DiceScreen(
 }
 
 @Composable
-fun HistoryItem(roll: Int) {
+fun HistoryItem(diceRoll: DiceRoll) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -222,15 +246,27 @@ fun HistoryItem(roll: Int) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Tirada:")
-            Text(
-                text = roll.toString(),
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
+
+                Text(
+                    text = "${diceRoll.diceValue} + ${if (diceRoll.modifier >= 0) diceRoll.modifier.toString() else diceRoll.modifier}",
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            Spacer(modifier = Modifier.width(20.dp))
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = diceRoll.total.toString(),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }
+
 
 @Preview
 @Composable
@@ -241,5 +277,7 @@ fun DiceScreenPreview() {
         onNavigateToUser = {},
         onNavigateToHome = {},
         onBack = {},
-        email = "")
+        onNavigateToSpells = {},
+        email = ""
+    )
 }
