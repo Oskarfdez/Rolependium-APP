@@ -8,7 +8,7 @@ Dentro del branch master de encuentra el proyecto de AndroidStudio de la aplicac
 
 ## Ficheros importantes
 
- - [API de donde se obtiene el fichero csv](https://awesomeopensource.com/project/elangosundar/awesome-README-templates)
+ - [API de donde se obtiene el fichero csv](https://www.dnd5eapi.co/api/spells)
  - [⬇️ Descargar la lista.py](https://raw.githubusercontent.com/Oskarfdez/Rolependium-APP/main/lista.py)
  - [⬇️ Descargar lista.py](https://raw.githubusercontent.com/Oskarfdez/Rolependium-APP/main/spells.csv)
   - [⬇️ Descargar fichero apk de la aplicacion (Google Drive)]( https://drive.google.com/file/d/1xlp94C6M9-_FWg8YcRZaOYZSvPzkrmFe/view?usp=sharing)
