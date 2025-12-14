@@ -1,7 +1,5 @@
 package com.example.login.presentation.login
 
-
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -12,15 +10,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -47,8 +39,7 @@ import com.example.login.presentation.components.RoundedButton
 import com.example.login.presentation.components.TransparentTextField
 import com.example.login.R
 import com.example.login.presentation.components.EventDialog
-import com.example.login.ui.theme.ROLERED
-
+import androidx.compose.runtime.remember
 
 @Composable
 fun LoginScreen(
@@ -57,8 +48,8 @@ fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onDismissDialog: () -> Unit
 ) {
-    val emailValue = rememberSaveable{ mutableStateOf("") }
-    val passwordValue = rememberSaveable{ mutableStateOf("") }
+    val emailValue = rememberSaveable { mutableStateOf("") }
+    val passwordValue = rememberSaveable { mutableStateOf("") }
     var passwordVisibility by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
@@ -66,62 +57,86 @@ fun LoginScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-    ){
-        Image(
-            painter = painterResource(R.drawable.logo),
-            contentDescription = "Login Image",
-            contentScale = ContentScale.Inside
-        )
+    ) {
+        // Decorative background
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.primaryContainer)
+        ) {
+            Image(
+                painter = painterResource(R.drawable.logo),
+                contentDescription = "Login Image",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+                    .align(Alignment.TopCenter),
+                alpha = 0.8f
+            )
+        }
 
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomCenter,
-
-        ){
+        ) {
             ConstraintLayout {
-
                 val (surface, fab) = createRefs()
 
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(400.dp)
+                        .height(420.dp)
                         .constrainAs(surface) {
                             bottom.linkTo(parent.bottom)
                         },
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(
-                        topStartPercent = 8,
-                        topEndPercent = 8
-                    )
-                ){
+                        topStartPercent = 16,
+                        topEndPercent = 16
+                    ),
+                    tonalElevation = 16.dp
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.SpaceEvenly
-                    ){
-                        Text(
-                            text = "Welcome Back!",
-                            style = MaterialTheme.typography.headlineSmall.copy(
-                                fontWeight = FontWeight.Medium
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.SpaceEvenly,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Welcome title
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Welcome back!",
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
                             )
-                        )
 
-                        Text(
-                            text = "Login to your Account",
-                            style = MaterialTheme.typography.headlineSmall.copy(
-                                color = ROLERED
+                            Text(
+                                text = "Sign in to your account",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
                             )
-                        )
+                        }
 
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Input fields
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ){
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
                             TransparentTextField(
                                 textFieldValue = emailValue,
                                 textLabel = "Email",
@@ -141,7 +156,6 @@ fun LoginScreen(
                                 keyboardActions = KeyboardActions(
                                     onDone = {
                                         focusManager.clearFocus()
-
                                         onLogin(emailValue.value, passwordValue.value)
                                     }
                                 ),
@@ -150,67 +164,79 @@ fun LoginScreen(
                                     IconButton(
                                         onClick = {
                                             passwordVisibility = !passwordVisibility
-                                        }
+                                        },
+                                        colors = IconButtonDefaults.iconButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     ) {
                                         Icon(
-                                            imageVector = if(passwordVisibility) {
+                                            imageVector = if (passwordVisibility) {
                                                 Icons.Default.Visibility
                                             } else {
                                                 Icons.Default.VisibilityOff
                                             },
-                                            contentDescription = "Toggle Password Icon"
+                                            contentDescription = "Show/Hide password"
                                         )
                                     }
                                 },
-                                visualTransformation = if(passwordVisibility) {
+                                visualTransformation = if (passwordVisibility) {
                                     VisualTransformation.None
                                 } else {
                                     PasswordVisualTransformation()
                                 }
                             )
 
-                            Text(
-                                modifier = Modifier.fillMaxWidth(),
-                                text = "Forgot Password?",
-                                style = MaterialTheme.typography.bodyLarge,
-                                textAlign = TextAlign.End
-                            )
                         }
 
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Buttons and links
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             RoundedButton(
-                                modifier = Modifier.width(280.dp).height(50.dp),
-                                text = "Login",
+                                modifier = Modifier
+                                    .width(280.dp)
+                                    .height(56.dp),
+                                text = "Sign In",
                                 displayProgressBar = state.displayProgressBar,
                                 onClick = {
                                     onLogin(emailValue.value, passwordValue.value)
                                 }
                             )
 
-                            ClickableText(
-                                text = buildAnnotatedString {
-                                    append("Do not have an Account?")
-
-                                    withStyle(
-                                        style = SpanStyle(
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    ){
-                                        append("Sign up")
-                                    }
-                                }
-                            ){
-                                onNavigateToRegister()
+                            // Registration link
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Don't have an account? ",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                ClickableText(
+                                    text = buildAnnotatedString {
+                                        withStyle(
+                                            style = SpanStyle(
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        ) {
+                                            append("Sign up")
+                                        }
+                                    },
+                                    onClick = { onNavigateToRegister() }
+                                )
                             }
                         }
                     }
                 }
 
+                // Floating button
                 FloatingActionButton(
                     modifier = Modifier
                         .size(72.dp)
@@ -218,35 +244,29 @@ fun LoginScreen(
                             top.linkTo(surface.top, margin = (-36).dp)
                             end.linkTo(surface.end, margin = 36.dp)
                         },
-                    containerColor = ROLERED,
-                    onClick = {
-                        onNavigateToRegister()
-                    }
+                    onClick = onNavigateToRegister,
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 8.dp,
+                        pressedElevation = 12.dp
+                    )
                 ) {
                     Icon(
                         modifier = Modifier.size(42.dp),
                         imageVector = Icons.Default.ArrowForward,
-                        contentDescription = "Forward Icon",
-                        tint = Color.White
+                        contentDescription = "Go to Registration",
                     )
                 }
             }
         }
 
-        if(state.errorMessage != null){
+        // Error dialog
+        if (state.errorMessage != null) {
             EventDialog(
                 errorMessage = state.errorMessage,
                 onDismiss = onDismissDialog
             )
         }
     }
-}
-@Preview(showBackground = true)
-@Composable
-fun LoginScreenPreview() {
-    LoginScreen(
-        state = LoginState(),
-        onLogin = { email, password -> },
-        onNavigateToRegister = {},
-        onDismissDialog = {})
 }

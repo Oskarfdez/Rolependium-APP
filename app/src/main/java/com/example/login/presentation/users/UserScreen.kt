@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.login.R
-import com.example.login.ui.theme.ROLERED
 import com.google.firebase.firestore.FirebaseFirestore
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -61,8 +60,7 @@ fun UsuarioScreen(
             Text(text = "Teléfono: ${telefono ?: "No encontrado"}", style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(24.dp))
 
-            Button(onClick = {onNavigateToSingOut()},
-                colors = ButtonDefaults.buttonColors(containerColor = ROLERED)) {
+            Button(onClick = {onNavigateToSingOut()},) {
                 Text("Cerrar sesión")
             }
         }
@@ -144,7 +142,6 @@ fun UserTopBar(
 ) {
     CenterAlignedTopAppBar(
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = ROLERED,
             titleContentColor = Color.White,
             navigationIconContentColor = Color.White,
             actionIconContentColor = Color.White

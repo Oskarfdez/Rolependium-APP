@@ -13,8 +13,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.login.admin.news.NewsScreen
-import com.example.login.admin.newscreator.NewsCreatorScreen
 import com.example.login.presentation.charlist.PersonajeListScreen
 import com.example.login.presentation.creator.CreatorScreen
 import com.example.login.presentation.creator.CreatorViewModel
@@ -54,8 +52,6 @@ fun AppNavigation() {
             addCharacterList(navController)
             addUserScreen(navController)
             addCharacterData(navController)
-            addAdmin(navController)
-            addNewsCreator(navController)
             addDice(navController)
             addSpells(navController)
             addSpellInfo(navController)
@@ -85,18 +81,7 @@ fun NavGraphBuilder.addLogin(
                     }
                 }
             }
-        } else if (viewModel.state.value.adminLogin) {
-            LaunchedEffect(key1 = Unit) {
-                navController.navigate(
-                    Destinations.Admin.route
-                ) {
-                    popUpTo(Destinations.Login.route) {
-                        inclusive = true
-                    }
-                }
-            }
-
-        }else {
+        } else {
             LoginScreen(
                 state = viewModel.state.value,
                 onLogin = viewModel::login,
@@ -283,21 +268,7 @@ fun NavGraphBuilder.addCharacterData(navController: NavHostController) {
         )
     }
 }
-fun NavGraphBuilder.addAdmin(navController: NavHostController) {
-    composable(route = Destinations.Admin.route, arguments = Destinations.Admin.arguments){
-        NewsScreen(onNavigateToNewsCreator = { navController.navigate(Destinations.NewsCreator.route, navOptions = null) },
-            onNavigateToSingOut = { navController.navigate(Destinations.Login.route){
-                popUpTo(0) { inclusive = true }
-                FirebaseAuth.getInstance().signOut()
-            } })
 
-    }
-}
-fun NavGraphBuilder.addNewsCreator(navController: NavHostController) {
-    composable(route = Destinations.NewsCreator.route, arguments = Destinations.NewsCreator.arguments){
-        NewsCreatorScreen(onBack = { navController.popBackStack() })
-    }
-}
 fun NavGraphBuilder.addDice(navController: NavHostController) {
     composable(
         route = Destinations.Dice.route + "/{email}",

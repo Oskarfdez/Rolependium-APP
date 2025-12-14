@@ -1,12 +1,13 @@
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.login.spelllist.Conjuro
+import com.example.login.presentation.spelllist.Conjuro
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
+import java.io.InputStream
 import java.io.InputStreamReader
 
 
@@ -50,7 +51,7 @@ class SpellListViewModel : ViewModel() {
     }
 
     // Función para cargar desde un InputStream (se llamará desde la Activity/Fragment)
-    fun loadConjurosFromInputStream(inputStream: java.io.InputStream) {
+    fun loadConjurosFromInputStream(inputStream: InputStream) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
@@ -66,7 +67,7 @@ class SpellListViewModel : ViewModel() {
         }
     }
 
-    private fun parseCSV(inputStream: java.io.InputStream): List<Conjuro> {
+    private fun parseCSV(inputStream: InputStream): List<Conjuro> {
         val conjuros = mutableListOf<Conjuro>()
 
         BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->

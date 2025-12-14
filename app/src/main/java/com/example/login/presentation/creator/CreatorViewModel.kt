@@ -93,15 +93,15 @@ class CreatorViewModel: ViewModel() {
     ) {
         val mod = { score: Int -> (score - 10) / 2 }
 
-        val nombresCaracteristicas = listOf("Fuerza", "Destreza", "Constitución", "Inteligencia", "Sabiduría", "Carisma")
+        val nombresCaracteristicas = listOf("Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma")
         val caracteristicasMap = nombresCaracteristicas.zip(caracteristicas).toMap()
 
         val habilidadesPorCaracteristica = mapOf(
-            "Fuerza" to listOf("Atletismo"),
-            "Destreza" to listOf("Acrobacias", "Juego de Manos", "Sigilo"),
-            "Inteligencia" to listOf("Arcano", "Historia", "Investigación", "Naturaleza", "Religión"),
-            "Sabiduría" to listOf("Percepción", "Perspicacia", "Medicina", "Supervivencia", "T. con Animales"),
-            "Carisma" to listOf("Engaño", "Interpretación", "Intimidación", "Persuasión")
+            "Strength" to listOf("Athletics"),
+            "Dexterity" to listOf("Acrobatics", "Sleight of Hand", "Stealth"),
+            "Intelligence" to listOf("Arcana", "History", "Investigation", "Nature", "Religion"),
+            "Wisdom" to listOf("Perception", "Insight", "Medicine", "Survival", "Animal Handling"),
+            "Charisma" to listOf("Deception", "Performance", "Intimidation", "Persuasion")
         )
 
         val baseMods = caracteristicasMap.mapValues { mod(it.value) }

@@ -45,7 +45,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.login.admin.admincomponents.AdminTopBar
-import com.example.login.ui.theme.ROLERED
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -140,7 +139,6 @@ fun NewsCreatorScreen(onBack: () -> Unit) {
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = ROLERED)
             ) {
                 Text("Publicar noticia")
             }
@@ -152,7 +150,6 @@ fun NewsCreatorScreen(onBack: () -> Unit) {
                     imagenUri = null
                 },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = ROLERED)
             ) {
                 Text("Borrar Datos")
             }

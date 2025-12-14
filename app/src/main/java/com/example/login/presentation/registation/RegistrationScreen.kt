@@ -4,8 +4,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
-//noinspection UsingMaterialAndMaterial3Libraries
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
@@ -33,11 +31,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.example.login.presentation.components.EventDialog
 import com.example.login.presentation.components.RoundedButton
-import com.example.login.presentation.components.SocialMediaButton
 import com.example.login.presentation.components.TransparentTextField
-import com.example.login.ui.theme.FACEBOOKCOLOR
-import com.example.login.ui.theme.GMAILCOLOR
-import com.example.login.ui.theme.ROLERED
+
 
 @Composable
 fun RegistrationScreen(
@@ -88,6 +83,9 @@ fun RegistrationScreen(
                     )
                 )
             }
+
+            Spacer(modifier = Modifier.height(30.dp))
+
 
             Column(modifier = Modifier
                 .fillMaxWidth()
@@ -160,7 +158,6 @@ fun RegistrationScreen(
                     keyboardActions = KeyboardActions(
                         onDone = {
                             focusManager.clearFocus()
-
                             onRegister(
                                 nameValue.value,
                                 emailValue.value,
@@ -168,6 +165,7 @@ fun RegistrationScreen(
                                 passwordValue.value,
                                 confirmPasswordValue.value
                             )
+                            onBack()
                         }
                     ),
                     imeAction = ImeAction.Done,
@@ -186,10 +184,10 @@ fun RegistrationScreen(
                     visualTransformation = if (confirmPasswordVisibility) VisualTransformation.None else PasswordVisualTransformation()
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(50.dp))
 
                 RoundedButton(
-                    modifier = Modifier.width(280.dp).height(50.dp),
+                    modifier = Modifier.width(380.dp).height(100.dp),
                     text = "Sign Up",
                     displayProgressBar = state.displayProgressBar,
                     onClick = {
@@ -199,7 +197,9 @@ fun RegistrationScreen(
                             phoneValue.value,
                             passwordValue.value,
                             confirmPasswordValue.value
+
                         )
+                        onBack()
                     }
                 )
 
@@ -224,62 +224,8 @@ fun RegistrationScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ){
-                    Divider(
-                        modifier = Modifier.width(24.dp),
-                        thickness = 1.dp,
-                        color = Color.Gray
-                    )
-
-                    Text(
-                        modifier = Modifier.padding(8.dp),
-                        text = "OR",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Black
-                        )
-                    )
-
-                    Divider(
-                        modifier = Modifier.width(24.dp),
-                        thickness = 1.dp,
-                        color = Color.Gray
-                    )
-                }
-
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = "Login with",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        MaterialTheme.colorScheme.primary
-                    ),
-                    textAlign = TextAlign.Center
-                )
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ){
-                SocialMediaButton(
-                    text = "Login with Facebook",
-                    onClick = {  },
-                    socialMediaColor = FACEBOOKCOLOR
-                )
-
-                SocialMediaButton(
-                    text = "Login with Gmail",
-                    onClick = { },
-                    socialMediaColor = GMAILCOLOR
-                )
-            }
 
         }
 

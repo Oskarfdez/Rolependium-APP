@@ -4,35 +4,29 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import kotlin.math.abs
 
-class ShakeDetector(
-    private val onShake: () -> Unit
-) : SensorEventListener {
-
+// Detector de agitación
+class ShakeDetector(private val onShake: () -> Unit) : android.hardware.SensorEventListener {
     private var lastUpdate: Long = 0
-    private var lastX: Float = 0.0f
-    private var lastY: Float = 0.0f
-    private var lastZ: Float = 0.0f
+    private var lastX: Float = 0f
+    private var lastY: Float = 0f
+    private var lastZ: Float = 0f
+    private val shakeThreshold = 800
 
-    companion object {
-        private const val SHAKE_THRESHOLD = 800
-        private const val UPDATE_INTERVAL = 100
-    }
-
-    override fun onSensorChanged(event: SensorEvent) {
+    override fun onSensorChanged(event: android.hardware.SensorEvent) {
         val currentTime = System.currentTimeMillis()
-
-        if ((currentTime - lastUpdate) > UPDATE_INTERVAL) {
-            val diffTime = currentTime - lastUpdate
+        if ((currentTime - lastUpdate) > 100) {
+            val timeDiff = currentTime - lastUpdate
             lastUpdate = currentTime
 
             val x = event.values[0]
             val y = event.values[1]
             val z = event.values[2]
 
-            val speed = Math.abs(x + y + z - lastX - lastY - lastZ) / diffTime * 10000
+            val speed = Math.abs(x + y + z - lastX - lastY - lastZ) / timeDiff * 10000
 
-            if (speed > SHAKE_THRESHOLD) {
+            if (speed > shakeThreshold) {
                 onShake()
             }
 
@@ -42,7 +36,5 @@ class ShakeDetector(
         }
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // No se necesita implementación
-    }
+    override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
 }

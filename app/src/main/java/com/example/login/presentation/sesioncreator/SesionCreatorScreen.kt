@@ -26,7 +26,7 @@ fun SesionCreatorScreen(
 ) {
     val viewModel: SesionCreatorViewModel = viewModel()
 
-    // Inicializar el email en el ViewModel
+    // email en el ViewModel
     LaunchedEffect(email) {
         viewModel.setEmail(email)
     }
@@ -40,13 +40,11 @@ fun SesionCreatorScreen(
     val success by viewModel.success.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    // Mostrar mensaje de éxito
+    // Mostrar mensaje de exito
     LaunchedEffect(success) {
         if (success) {
-            // Limpiar campos y navegar hacia atrás
             nombre = ""
             descripcion = ""
-            // Podrías añadir un delay antes de navegar o mostrar un mensaje
             onBack()
         }
     }
@@ -65,7 +63,7 @@ fun SesionCreatorScreen(
                         contentDescription = "Crear sesión"
                     )
                 },
-                text = { Text("Crear Sesión") },
+                text = { Text("Create Session") },
                 expanded = true,
                 modifier = Modifier.padding(16.dp)
             )
@@ -84,18 +82,18 @@ fun SesionCreatorScreen(
             ) {
                 // Título de la pantalla
                 Text(
-                    text = "Crear Nueva Sesión",
+                    text = "Create new session",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Campo para el nombre de la sesión
+                // NOMBRe
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
-                    label = { Text("Nombre de la sesión") },
-                    placeholder = { Text("Ej: La búsqueda del dragón") },
+                    label = { Text("Name of the session") },
+                    placeholder = { Text("Ex: The Tower of the Mad Mage") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions.Default.copy(
                         imeAction = ImeAction.Next,
@@ -105,12 +103,12 @@ fun SesionCreatorScreen(
                     isError = nombre.isBlank() && nombre.isNotEmpty()
                 )
 
-                // Campo para la descripción
+                // Descripcion
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
-                    label = { Text("Descripción") },
-                    placeholder = { Text("Describe la aventura, el mundo, o los objetivos...") },
+                    label = { Text("Desciption of the session") },
+                    placeholder = { Text("Describe the session in a few words") },
                     singleLine = false,
                     maxLines = 5,
                     minLines = 3,
@@ -123,7 +121,6 @@ fun SesionCreatorScreen(
                     isError = descripcion.isBlank() && descripcion.isNotEmpty()
                 )
 
-                // Información adicional
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -135,7 +132,7 @@ fun SesionCreatorScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "Información de la sesión:",
+                            text = "Info about the session:",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -143,16 +140,6 @@ fun SesionCreatorScreen(
 
                         Text(
                             text = "• Master: $email",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-
-                        Text(
-                            text = "• Jugadores: Podrán unirse después",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-
-                        Text(
-                            text = "• Horarios: Se configurarán más tarde",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -169,7 +156,7 @@ fun SesionCreatorScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             CircularProgressIndicator()
-                            Text("Creando sesión...")
+                            Text("Creating session...")
                         }
                     }
                 }
@@ -208,7 +195,7 @@ fun SesionCreatorScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "¡Sesión creada exitosamente!",
+                                text = "Session created successfully!",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )

@@ -1,4 +1,4 @@
-package com.example.login.spelllist
+package com.example.login.presentation.spelllist
 
 data class Conjuro(
     val nombre: String,

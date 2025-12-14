@@ -27,12 +27,6 @@ class LoginViewModel : ViewModel() {
             return
         }
 
-        if (email == "admin" && password == "admin") {
-            state.value = state.value.copy(
-                adminLogin = true)
-            return
-        }
-
         state.value = state.value.copy(displayProgressBar = true)
 
         viewModelScope.launch {

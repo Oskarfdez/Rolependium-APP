@@ -2,8 +2,11 @@ package com.example.login.presentation.sesion
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.login.presentation.sesioncreator.Sesion
+import com.example.login.presentation.sesioncreator.SesionState
+import com.example.login.presentation.sesioncreator.Usuario
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.QueryDocumentSnapshot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -23,74 +26,149 @@ class SesionViewModel : ViewModel() {
     private val _error = MutableStateFlow("")
     val error: StateFlow<String> = _error
 
-    /**
-     * Establece el email del usuario actual
-     */
+    private val _showJoinDialog = MutableStateFlow(false)
+    val showJoinDialog: StateFlow<Boolean> = _showJoinDialog
+
+    private val _joinDialogMessage = MutableStateFlow("")
+    val joinDialogMessage: StateFlow<String> = _joinDialogMessage
+
+
     fun setEmail(email: String) {
         _email.value = email
     }
 
-    /**
-     * Carga las sesiones en las que el usuario está
-     */
-    fun loadSesiones(context: Context) {
+    fun showJoinDialog() {
+        _showJoinDialog.value = true
+        _joinDialogMessage.value = ""
+    }
+
+    fun hideJoinDialog() {
+        _showJoinDialog.value = false
+        _joinDialogMessage.value = ""
+    }
+
+    fun joinSesion(sesionId: String, context: Context) {
         if (_email.value.isEmpty()) {
             _error.value = "Error: No se ha configurado el email del usuario"
             return
         }
 
+        if (sesionId.isEmpty()) {
+            _joinDialogMessage.value = "Error: El ID de sesión no puede estar vacío"
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                //Accede a datos
+                val sesionDoc = db.collection("sesiones")
+                    .document(sesionId)
+                    .get()
+                    .await()
+                if (!sesionDoc.exists()) {
+                    _joinDialogMessage.value = "Error: No se encontró ninguna sesión con ese ID"
+                    return@launch
+                }
+                val sesion = sesionDoc.toObject(Sesion::class.java)
+                if (sesion == null) {
+                    _joinDialogMessage.value = "Error: Formato de sesión inválido"
+                    return@launch
+                }
+
+                //Comprueba si eres master
+                if (sesion.master == _email.value) {
+                    _joinDialogMessage.value = "Error: Ya eres el master de esta sesión"
+                    return@launch
+                }
+
+                //Comprueba si ya estás en la sesión
+                val jugadoresActuales = sesion.jugadores ?: emptyList()
+                if (jugadoresActuales.contains(_email.value)) {
+                    _joinDialogMessage.value = "Error: Ya estás en esta sesión"
+                    return@launch
+                }
+
+                db.collection("sesiones")
+                    .document(sesionId)
+                    .update(
+                        "jugadores", FieldValue.arrayUnion(_email.value),
+                        "ultimaModificacion", com.google.firebase.Timestamp.now()
+                    )
+                    .await()
+
+                _joinDialogMessage.value = "¡Te has unido a la sesión '${sesion.nombre}' exitosamente!"
+
+                //Recargar la lista de sesiones
+                kotlinx.coroutines.delay(1000)
+                loadSesiones(context)
+
+                //Ocultar el diálogo
+                kotlinx.coroutines.delay(2000)
+                hideJoinDialog()
+
+            } catch (e: Exception) {
+                _joinDialogMessage.value = "Error al unirse a la sesión: ${e.message}"
+                e.printStackTrace()
+            }
+        }
+    }
+
+
+    fun loadSesiones(context: Context) {
+
+        // error que ocurre si el valor email está vacío (Esto solo me ocurría cuando añadia los datos de la cuenta manualmente)
+        if (_email.value.isEmpty()) {
+            _error.value = "Error: No se ha configurado el email del usuario"
+            return
+        }
         _isLoading.value = true
         _error.value = ""
-        _sesiones.value = emptyList()
 
         viewModelScope.launch {
             try {
                 val emailUsuario = _email.value
 
-                // Obtener todas las sesiones
-                val allSesiones = db.collection("sesiones")
+                // Buscar sesiones donde el usuario esta en la lista de jugadores
+                val sesionesDelUsuario = db.collection("sesiones")
+                    .whereArrayContains("jugadores", emailUsuario)
                     .get()
                     .await()
 
-                val sesionesDelUsuario = mutableListOf<QueryDocumentSnapshot>()
-
-                // Filtrar sesiones donde el usuario es master o está en la lista de jugadores
-                for (doc in allSesiones.documents) {
-                    val sesion = doc.toObject(Sesion::class.java) ?: continue
-
-                    // Verificar si el usuario es master
-                    if (sesion.master == emailUsuario) {
-                        sesionesDelUsuario.add(doc as QueryDocumentSnapshot)
-                        continue
-                    }
-
-                    // Verificar si el usuario está en la lista de jugadores (que ahora son solo emails)
-                    val usuarioEnJugadores = sesion.jugadores?.any { jugadorEmail ->
-                        val email = jugadorEmail as? String
-                        email == emailUsuario
-                    } ?: false
-
-                    if (usuarioEnJugadores) {
-                        sesionesDelUsuario.add(doc as QueryDocumentSnapshot)
-                    }
-                }
-
-                // Convertir a SesionState y obtener nombres de master
+                // Convertir a SesionState y obtener nombres
                 val sesionesConNombres = mutableListOf<SesionState>()
 
-                for (doc in sesionesDelUsuario) {
+                for (doc in sesionesDelUsuario.documents) {
                     val sesion = doc.toObject(Sesion::class.java) ?: continue
 
                     val masterNombre = if (sesion.master == emailUsuario) {
-                        "Tú"
+                        "You"
                     } else {
                         getUserName(sesion.master)
                     }
 
-                    // Convertir la lista de jugadores (ahora solo emails) a List<String>
-                    val emailsJugadores = sesion.jugadores?.mapNotNull {
-                        it as? String
-                    } ?: emptyList()
+                    // Obtener datos de horarios
+                    val horarioActual = sesion.horarios?.get("horario_actual") as? String ?: ""
+                    val listaHorarios = sesion.horarios?.get("lista_horarios") as? List<String> ?: emptyList()
+
+                    // Obtener lista de aceptaciones por horario
+                    val listaAceptacionesMap = mutableMapOf<String, List<String>>()
+
+                    // Extraer aceptaciones
+                    sesion.horarios?.forEach { (key, value) ->
+                        if (key.startsWith("aceptados_")) {
+                            val horarioKey = key.removePrefix("aceptados_")
+                            val aceptaciones = value as? List<String> ?: emptyList()
+                            listaAceptacionesMap[horarioKey] = aceptaciones
+                        }
+                    }
+
+                    // Verificar si el usuario actual ya ha aceptado algún horario
+                    val usuarioHaAceptado = mutableSetOf<String>()
+                    listaAceptacionesMap.forEach { (horario, aceptaciones) ->
+                        if (emailUsuario in aceptaciones) {
+                            usuarioHaAceptado.add(horario)
+                        }
+                    }
 
                     val sesionState = SesionState(
                         id = doc.id,
@@ -98,8 +176,11 @@ class SesionViewModel : ViewModel() {
                         descripcion = sesion.descripcion,
                         masterEmail = sesion.master,
                         masterNombre = masterNombre,
-                        jugadores = emailsJugadores,
-                        horarios = sesion.horarios ?: emptyList(),
+                        jugadores = sesion.jugadores ?: emptyList(),
+                        horarioActual = horarioActual,
+                        listaHorarios = listaHorarios,
+                        listaAceptaciones = listaAceptacionesMap,
+                        usuarioHaAceptado = usuarioHaAceptado,
                         notificaciones = sesion.notificaciones ?: emptyList(),
                         fechaCreacion = sesion.fechaCreacion
                     )
@@ -107,7 +188,7 @@ class SesionViewModel : ViewModel() {
                     sesionesConNombres.add(sesionState)
                 }
 
-                // Ordenar por fecha de creación (más reciente primero)
+                // Ordenar por fecha de creación
                 val sesionesOrdenadas = sesionesConNombres.sortedByDescending {
                     it.fechaCreacion?.seconds ?: 0
                 }
@@ -152,33 +233,3 @@ class SesionViewModel : ViewModel() {
 }
 
 // Data class para la sesión con la nueva estructura
-data class Sesion(
-    val id: String = "",
-    val nombre: String = "",
-    val descripcion: String = "",
-    val master: String = "",
-    val jugadores: List<Any>? = emptyList(), // Ahora es una lista de emails (Strings)
-    val horarios: List<String>? = emptyList(),
-    val notificaciones: List<String>? = emptyList(),
-    val fechaCreacion: com.google.firebase.Timestamp? = null,
-    val ultimaModificacion: com.google.firebase.Timestamp? = null
-)
-
-data class Usuario(
-    val email: String = "",
-    val nombre: String = ""
-)
-
-// Data class para el estado de la sesión
-data class SesionState(
-    val id: String,
-    val nombre: String,
-    val descripcion: String?,
-    val masterEmail: String,
-    val masterNombre: String?,
-    val jugadores: List<String>, // Solo emails de jugadores
-    val horarios: List<String>,
-    val notificaciones: List<String>,
-    val fechaCreacion: com.google.firebase.Timestamp?
-)
-

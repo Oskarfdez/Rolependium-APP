@@ -1,10 +1,8 @@
 package com.example.login.presentation.sesiondata
-
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.QueryDocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -13,8 +11,6 @@ import kotlinx.coroutines.tasks.await
 class SesionDataViewModel : ViewModel() {
     private val _email = MutableStateFlow("")
     private val db = FirebaseFirestore.getInstance()
-
-    // Estados observables
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -24,19 +20,150 @@ class SesionDataViewModel : ViewModel() {
     private val _error = MutableStateFlow("")
     val error: StateFlow<String> = _error
 
-    private val _horariosVotacion = MutableStateFlow<HorariosVotacion?>(null)
-    val horariosVotacion: StateFlow<HorariosVotacion?> = _horariosVotacion
+    private val _showAddHorarioDialog = MutableStateFlow(false)
+    val showAddHorarioDialog: StateFlow<Boolean> = _showAddHorarioDialog
 
-    /**
-     * Establece el email del usuario actual
-     */
+    private val _toastMessage = MutableStateFlow<String?>(null)
+    val toastMessage: StateFlow<String?> = _toastMessage
+
+    private val _horariosSeleccionados = MutableStateFlow<MutableSet<String>>(mutableSetOf())
+    val horariosSeleccionados: StateFlow<Set<String>> = _horariosSeleccionados
+
+    private val _showConfirmDialog = MutableStateFlow(false)
+    val showConfirmDialog: StateFlow<Boolean> = _showConfirmDialog
+
     fun setEmail(email: String) {
         _email.value = email
     }
 
-    /**
-     * Carga los datos de una sesión específica por ID
-     */
+    fun showAddHorarioDialog() {
+        _showAddHorarioDialog.value = true
+    }
+
+    fun hideAddHorarioDialog() {
+        _showAddHorarioDialog.value = false
+    }
+
+    fun showConfirmDialog() {
+        _showConfirmDialog.value = true
+    }
+
+    fun hideConfirmDialog() {
+        _showConfirmDialog.value = false
+    }
+
+    fun showToast(message: String) {
+        _toastMessage.value = message
+        // Limpiar el mensaje después de un tiempo
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(3000)
+            _toastMessage.value = null
+        }
+    }
+
+    fun addHorario(sesionId: String, nuevoHorario: String) {
+        if (nuevoHorario.isBlank()) {
+            _error.value = "Error: El horario no puede estar vacío"
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                db.collection("sesiones")
+                    .document(sesionId)
+                    .update(
+                        "horarios.lista_horarios", FieldValue.arrayUnion(nuevoHorario),
+                        "ultimaModificacion", com.google.firebase.Timestamp.now()
+                    )
+                    .await()
+
+                _sesionData.value?.let { sesionActual ->
+                    val listaHorariosActualizada = sesionActual.listaHorarios.toMutableList()
+                    listaHorariosActualizada.add(nuevoHorario)
+
+                    _sesionData.value = sesionActual.copy(
+                        listaHorarios = listaHorariosActualizada
+                    )
+                }
+
+                showToast("Horario añadido correctamente")
+                hideAddHorarioDialog()
+
+            } catch (e: Exception) {
+                _error.value = "Error al añadir el horario: ${e.message}"
+                e.printStackTrace()
+            }
+        }
+    }
+
+
+    fun confirmarHorariosSeleccionados(sesionId: String) {
+        val horarios = _horariosSeleccionados.value
+        if (horarios.isEmpty()) {
+            _error.value = "Error: No has seleccionado ningún horario"
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                for (horario in horarios) {
+                    val aceptacionesPath = "horarios.aceptados_${horario}"
+
+                    db.collection("sesiones")
+                        .document(sesionId)
+                        .update(
+                            aceptacionesPath, FieldValue.arrayUnion(_email.value),
+                            "ultimaModificacion", com.google.firebase.Timestamp.now()
+                        )
+                        .await()
+                }
+
+                _sesionData.value?.let { sesionActual ->
+                    val nuevosHorariosAceptados = sesionActual.usuarioHaAceptado.toMutableSet()
+                    nuevosHorariosAceptados.addAll(horarios)
+
+                    val nuevaListaAceptaciones = sesionActual.listaAceptaciones.toMutableMap()
+
+                    for (horario in horarios) {
+                        val aceptacionesActuales = nuevaListaAceptaciones[horario] ?: emptyList()
+                        val nuevasAceptaciones = aceptacionesActuales + _email.value
+                        nuevaListaAceptaciones[horario] = nuevasAceptaciones
+                    }
+
+                    _sesionData.value = sesionActual.copy(
+                        usuarioHaAceptado = nuevosHorariosAceptados,
+                        listaAceptaciones = nuevaListaAceptaciones
+                    )
+                }
+
+                _horariosSeleccionados.value = mutableSetOf()
+
+                loadSesionData(sesionId)
+
+                showToast("Horarios confirmados correctamente")
+                hideConfirmDialog()
+
+            } catch (e: Exception) {
+                _error.value = "Error al confirmar horarios: ${e.message}"
+                e.printStackTrace()
+            }
+        }
+    }
+
+
+
+
+    fun toggleHorarioSeleccionado(horario: String) {
+        val current = _horariosSeleccionados.value.toMutableSet()
+        if (current.contains(horario)) {
+            current.remove(horario)
+        } else {
+            current.add(horario)
+        }
+        _horariosSeleccionados.value = current
+    }
+
+
     fun loadSesionData(sesionId: String) {
         if (_email.value.isEmpty()) {
             _error.value = "Error: No se ha configurado el email del usuario"
@@ -51,11 +178,10 @@ class SesionDataViewModel : ViewModel() {
         _isLoading.value = true
         _error.value = ""
         _sesionData.value = null
-        _horariosVotacion.value = null
+        _horariosSeleccionados.value = mutableSetOf()
 
         viewModelScope.launch {
             try {
-                // 1. Obtener datos básicos de la sesión
                 val sesionDoc = db.collection("sesiones")
                     .document(sesionId)
                     .get()
@@ -66,81 +192,67 @@ class SesionDataViewModel : ViewModel() {
                     return@launch
                 }
 
-                // Convertir documento a SesionData
                 val sesion = sesionDoc.toObject(Sesion::class.java) ?: run {
                     _error.value = "Error: Formato de sesión inválido"
                     return@launch
                 }
 
-                // Obtener el ID real del documento
-                val idReal = sesionDoc.id
-
-                // Obtener nombres de los jugadores
                 val jugadoresConNombres = mutableListOf<JugadorConNombre>()
 
-                // Obtener nombre del master
-                val masterNombre = getUserName(sesion.master)
-                jugadoresConNombres.add(
-                    JugadorConNombre(
-                        email = sesion.master,
-                        nombre = masterNombre ?: sesion.master,
-                        esMaster = true
-                    )
-                )
-
-                // Obtener nombres de los demás jugadores
-                // Los jugadores ahora son una lista de Strings (emails)
-                val jugadoresEmails = sesion.jugadores?.mapNotNull {
-                    it as? String
-                } ?: emptyList()
-
-                for (jugadorEmail in jugadoresEmails) {
-                    // Saltar el master que ya añadimos
-                    if (jugadorEmail != sesion.master) {
-                        val jugadorNombre = getUserName(jugadorEmail)
-                        jugadoresConNombres.add(
-                            JugadorConNombre(
-                                email = jugadorEmail,
-                                nombre = jugadorNombre ?: jugadorEmail,
-                                esMaster = false
-                            )
+                for (email in sesion.jugadores ?: emptyList()) {
+                    val nombre = getUserName(email)
+                    jugadoresConNombres.add(
+                        JugadorConNombre(
+                            email = email,
+                            nombre = nombre ?: email,
+                            esMaster = email == sesion.master
                         )
+                    )
+                }
+
+                val horarioActual = sesion.horarios?.get("horario_actual") as? String ?: ""
+                val listaHorarios = sesion.horarios?.get("lista_horarios") as? List<String> ?: emptyList()
+
+                val listaAceptacionesMap = mutableMapOf<String, List<String>>()
+
+                sesion.horarios?.forEach { (key, value) ->
+                    if (key.startsWith("aceptados_")) {
+                        val horarioKey = key.removePrefix("aceptados_")
+                        val aceptaciones = value as? List<String> ?: emptyList()
+                        listaAceptacionesMap[horarioKey] = aceptaciones
                     }
                 }
 
-                // Crear el objeto SesionData con la información completa
+                val usuarioHaAceptado = mutableSetOf<String>()
+                listaAceptacionesMap.forEach { (horario, aceptaciones) ->
+                    if (_email.value in aceptaciones) {
+                        usuarioHaAceptado.add(horario)
+                    }
+                }
+
+                val jugadoresNoMaster = (sesion.jugadores ?: emptyList())
+                    .filter { it != sesion.master }
+
                 val sesionData = SesionData(
-                    id = idReal,
+                    id = sesionDoc.id,
                     nombre = sesion.nombre,
                     descripcion = sesion.descripcion,
-                    master = sesion.master,
-                    jugadores = jugadoresEmails,
-                    horarios = sesion.horarios ?: emptyList(),
+                    masterEmail = sesion.master,
+                    masterNombre = getUserName(sesion.master) ?: sesion.master,
+                    jugadores = sesion.jugadores ?: emptyList(),
+                    jugadoresNoMaster = jugadoresNoMaster, // Solo jugadores, no master
+                    horarioActual = horarioActual,
+                    listaHorarios = listaHorarios,
+                    listaAceptaciones = listaAceptacionesMap,
+                    usuarioHaAceptado = usuarioHaAceptado,
                     notificaciones = sesion.notificaciones ?: emptyList(),
-                    fechaCreacion = sesion.fechaCreacion,
-                    ultimaModificacion = sesion.ultimaModificacion,
-                    jugadoresConNombres = jugadoresConNombres
+                    fechaCreacion = sesion.fechaCreacion
                 )
 
                 _sesionData.value = sesionData
 
-                // 2. Obtener datos de horarios de votación
-                try {
-                    val horariosDoc = db.collection("sesiones")
-                        .document(sesionId)
-                        .collection("horarios")
-                        .document("votaciones")
-                        .get()
-                        .await()
-
-                    if (horariosDoc.exists()) {
-                        val votacion = horariosDoc.toObject(HorariosVotacion::class.java)
-                        _horariosVotacion.value = votacion
-                    }
-                } catch (e: Exception) {
-                    // Si no existe la subcolección, no es un error crítico
-                    println("No se encontró la subcolección de horarios: ${e.message}")
-                }
+                val seleccionesUsuario = usuarioHaAceptado.toMutableSet()
+                _horariosSeleccionados.value = seleccionesUsuario
 
             } catch (e: Exception) {
                 _error.value = "Error al cargar los datos: ${e.message}"
@@ -151,10 +263,7 @@ class SesionDataViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Obtiene el nombre de usuario desde Firestore
-     */
-    private suspend fun getUserName(email: String): String? {
+    suspend fun getUserName(email: String): String? {
         return try {
             val doc = db.collection("usuarios")
                 .whereEqualTo("email", email)
@@ -164,65 +273,76 @@ class SesionDataViewModel : ViewModel() {
 
             if (!doc.isEmpty) {
                 val usuario = doc.documents[0].toObject(Usuario::class.java)
-                usuario?.nombre
+                usuario?.name ?: email
             } else {
-                null
+                email
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            null
+            email
+        }
+    }
+    fun eliminarJugador(sesionId: String, emailJugador: String) {
+        if (sesionId.isEmpty() || emailJugador.isEmpty()) {
+            _error.value = "Error: Datos inválidos"
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                db.collection("sesiones")
+                    .document(sesionId)
+                    .update(
+                        "jugadores", FieldValue.arrayRemove(emailJugador),
+                        "ultimaModificacion", com.google.firebase.Timestamp.now()
+                    )
+                    .await()
+
+                val sesionDoc = db.collection("sesiones")
+                    .document(sesionId)
+                    .get()
+                    .await()
+
+                if (!sesionDoc.exists()) {
+                    _error.value = "Error: Sesión no encontrada"
+                    return@launch
+                }
+
+                val sesion = sesionDoc.toObject(Sesion::class.java)
+                if (sesion == null) {
+                    _error.value = "Error: Formato de sesión inválido"
+                    return@launch
+                }
+
+                sesion.horarios?.forEach { (key, value) ->
+                    if (key.startsWith("aceptados_")) {
+                        val aceptaciones = value as? List<String> ?: emptyList()
+                        if (emailJugador in aceptaciones) {
+                            val nuevasAceptaciones = aceptaciones.filter { it != emailJugador }
+                            db.collection("sesiones")
+                                .document(sesionId)
+                                .update(
+                                    "horarios.$key", nuevasAceptaciones
+                                )
+                                .await()
+                        }
+                    }
+                }
+
+                loadSesionData(sesionId)
+
+                showToast("Jugador eliminado correctamente")
+
+            } catch (e: Exception) {
+                _error.value = "Error al eliminar jugador: ${e.message}"
+                e.printStackTrace()
+            }
         }
     }
 
-    /**
-     * Resetea el estado de error
-     */
     fun clearError() {
         _error.value = ""
     }
+
 }
 
-// Data classes (deben estar en el mismo archivo o en archivos separados)
-
-// Data class para representar la sesión en Firestore (igual que en SesionCreatorViewModel)
-data class Sesion(
-    val id: String = "",
-    val nombre: String = "",
-    val descripcion: String = "",
-    val master: String = "",
-    val jugadores: List<Any>? = emptyList(), // Lista de emails (Strings)
-    val horarios: List<String>? = emptyList(),
-    val notificaciones: List<String>? = emptyList(),
-    val fechaCreacion: com.google.firebase.Timestamp? = null,
-    val ultimaModificacion: com.google.firebase.Timestamp? = null
-)
-
-// Data class para la sesión con información completa
-data class SesionData(
-    val id: String,
-    val nombre: String,
-    val descripcion: String,
-    val master: String,
-    val jugadores: List<String>,
-    val horarios: List<String>,
-    val notificaciones: List<String>,
-    val fechaCreacion: com.google.firebase.Timestamp?,
-    val ultimaModificacion: com.google.firebase.Timestamp?,
-    val jugadoresConNombres: List<JugadorConNombre>
-)
-
-data class JugadorConNombre(
-    val email: String,
-    val nombre: String,
-    val esMaster: Boolean
-)
-
-data class HorariosVotacion(
-    val sesion: List<String> = emptyList(),
-    val aceptados: Int = 0
-)
-
-data class Usuario(
-    val email: String = "",
-    val nombre: String = ""
-)

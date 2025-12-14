@@ -49,37 +49,27 @@ class SesionCreatorViewModel: ViewModel() {
                 // Crear un ID único para la sesión
                 val sesionId = UUID.randomUUID().toString()
 
-                // Crear el objeto de sesión con la nueva estructura
+                // Crear el objeto de sesión con estructura para múltiples jugadores
                 val sesion = hashMapOf(
                     "id" to sesionId,
                     "nombre" to nombre,
                     "descripcion" to descripcion,
                     "master" to _email.value,
-                    "jugadores" to listOf(_email.value), // Solo lista de emails, empezando con el master
-                    "horarios" to emptyList<String>(),  // Lista vacía inicialmente
-                    "notificaciones" to emptyList<String>(), // Lista vacía inicialmente
+                    "jugadores" to listOf(_email.value), // El master también está en la lista
+                    "horarios" to mapOf(
+                        "horario_actual" to "", // String vacío inicialmente
+                        "lista_horarios" to emptyList<String>() // Lista de horarios disponibles
+                        // Las aceptaciones se crearán dinámicamente por cada horario
+                    ),
+                    "notificaciones" to emptyList<String>(),
                     "fechaCreacion" to com.google.firebase.Timestamp.now(),
                     "ultimaModificacion" to com.google.firebase.Timestamp.now()
-                )
-
-                // Crear la colección de horarios para esta sesión
-                val horariosCollection = hashMapOf(
-                    "sesion" to emptyList<String>(), // Lista vacía inicialmente
-                    "aceptados" to 0 // Inicialmente 0 aceptados
                 )
 
                 // Guardar la sesión en Firestore
                 db.collection("sesiones")
                     .document(sesionId)
                     .set(sesion)
-                    .await()
-
-                // Crear la subcolección de horarios para esta sesión
-                db.collection("sesiones")
-                    .document(sesionId)
-                    .collection("horarios")
-                    .document("votaciones")
-                    .set(horariosCollection)
                     .await()
 
                 _success.value = true
@@ -90,6 +80,7 @@ class SesionCreatorViewModel: ViewModel() {
             } finally {
                 _isLoading.value = false
             }
+
         }
     }
 

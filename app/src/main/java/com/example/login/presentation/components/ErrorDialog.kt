@@ -13,11 +13,11 @@ import androidx.compose.material.TextButton
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 
 
 // Composable que muestra un diálogo de error con un mensaje y un botón para cerrarlo
@@ -47,7 +47,7 @@ fun EventDialog(
         text = {
             // Cuerpo del diálogo con el mensaje de error, que es un recurso de texto
             Text(
-                text = LocalContext.current.getString(errorMessage),  // Obtiene el mensaje de error usando el recurso
+                text = stringResource(errorMessage),  // Obtiene el mensaje de error usando el recurso
                 style = TextStyle(
                     color = colorScheme.onSurface,  // Color del texto basado en el tema
                     fontSize = 16.sp  // Tamaño de la fuente

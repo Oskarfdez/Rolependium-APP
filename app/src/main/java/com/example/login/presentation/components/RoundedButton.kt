@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.login.ui.theme.ROLERED
 
 @Composable
 fun RoundedButton(
@@ -28,9 +27,6 @@ fun RoundedButton(
             modifier = modifier.width(280.dp).height(50.dp),
             onClick = onClick,
             shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = ROLERED
-            )
         ) {
             Text(
                 text = text,

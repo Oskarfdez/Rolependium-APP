@@ -7,13 +7,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-
 class CharListViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
     private val personajeList = MutableStateFlow<List<CharListState>>(emptyList())
     val characters: StateFlow<List<CharListState>> = personajeList
 
-    fun cargarGuerreros(email: String) {
+    fun cargarPersonajes(email: String) {
         viewModelScope.launch {
             db.collection("personajes")
                 .whereEqualTo("email", email)
@@ -34,4 +33,19 @@ class CharListViewModel : ViewModel() {
         }
     }
 
+    fun eliminarPersonaje(id: String) {
+        viewModelScope.launch {
+            db.collection("personajes")
+                .document(id)
+                .delete()
+                .addOnSuccessListener {
+                    // Actualizar la lista local eliminando el personaje
+                    personajeList.value = personajeList.value.filter { it.id != id }
+                    println("Personaje eliminado exitosamente")
+                }
+                .addOnFailureListener { e ->
+                    println("Error eliminando personaje: ${e.message}")
+                }
+        }
+    }
 }

@@ -29,7 +29,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.login.Data.DataViewModel
 import com.example.login.admin.admincomponents.AdminTopBar
-import com.example.login.ui.theme.ROLERED
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -49,7 +48,6 @@ fun NewsScreen(onNavigateToNewsCreator: () -> Unit, onNavigateToSingOut: () -> U
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = ROLERED)
             ) {
                 Text("Añadir noticias", style = MaterialTheme.typography.titleMedium, color = Color.White)
             }

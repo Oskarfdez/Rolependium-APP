@@ -1,39 +1,56 @@
 package com.example.login.presentation.sesiondata
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.ErrorOutline
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.login.R
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SesionDataScreen(
     onBack: () -> Unit,
     sesionId: String,
     email: String
 ) {
-    // Instancia del ViewModel
+    //VIEWMODEL
     val viewModel: SesionDataViewModel = viewModel()
+    val clipboard = LocalClipboardManager.current
+    var nuevoHorario by remember { mutableStateOf("") }
+    val showAddHorarioDialog by viewModel.showAddHorarioDialog.collectAsState()
+
+    // Estados para confirmación
+    val showConfirmDialog by viewModel.showConfirmDialog.collectAsState()
+
+    data class JugadorAEliminar(
+        val email: String,
+        val nombre: String)
+
+    // Estado para el diálogo de confirmación de eliminación
+    val showEliminarJugadorDialog = remember { mutableStateOf(false) }
+    val jugadorAEliminar = remember { mutableStateOf<JugadorAEliminar?>(null) }
+
+
+
+    val toastMessage by viewModel.toastMessage.collectAsState()
+    val horariosSeleccionados by viewModel.horariosSeleccionados.collectAsState()
 
     // Efecto para cargar los datos cuando se entra a la pantalla
     LaunchedEffect(sesionId) {
@@ -44,359 +61,877 @@ fun SesionDataScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val sesionData by viewModel.sesionData.collectAsState()
     val error by viewModel.error.collectAsState()
-    val horariosVotacion by viewModel.horariosVotacion.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-        // Mostrar carga
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-            return@Column
-        }
+    // Verificar si el usuario actual es el master
+    val esMaster = sesionData?.masterEmail == email
+    val esJugador = sesionData?.jugadores?.contains(email) == true && !esMaster
 
-        // Mostrar error si existe
-        if (error.isNotEmpty()) {
-            Text(
-                text = error,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            Button(onClick = { viewModel.clearError() }) {
-                Text("Intentar de nuevo")
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // Mostrar datos de la sesión
-        sesionData?.let { sesion ->
-            // Título principal
-            Text(
-                text = sesion.nombre,
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            // Descripción
-            if (sesion.descripcion.isNotEmpty()) {
-                Text(
-                    text = sesion.descripcion,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-
-            // Información del Master
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Master de la sesión:",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 4.dp)
+    // AlertDialog para añadir horario (solo master)
+    if (showAddHorarioDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.hideAddHorarioDialog() },
+            title = { Text("Add Date") },
+            text = {
+                Column {
+                    Text("Write the date you want to add:")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = nuevoHorario,
+                        onValueChange = { nuevoHorario = it },
+                        label = { Text("Ex: Monday 15:00-17:00") },
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    val master = sesion.jugadoresConNombres.find { it.esMaster }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Master",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = master?.nombre ?: sesion.master,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (nuevoHorario.isNotBlank()) {
+                            viewModel.addHorario(sesionId, nuevoHorario)
+                            nuevoHorario = ""
+                        }
+                    },
+                    enabled = nuevoHorario.isNotBlank()
+                ) {
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.hideAddHorarioDialog()
+                        nuevoHorario = ""
                     }
+                ) {
+                    Text("Cancel")
                 }
             }
+        )
+    }
 
-            // Lista de jugadores
-            Card(
+    // AlertDialog para confirmar horarios seleccionados
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.hideConfirmDialog() },
+            title = { Text("Confirm Dates") },
+            text = {
+                Column {
+                    Text("You´re going to accept the following dates:")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (horariosSeleccionados.isEmpty()) {
+                        Text(
+                            "No Date selected",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        horariosSeleccionados.forEach { horario ->
+                            Text(
+                                "• $horario",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Note: This action cannot be undone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.confirmarHorariosSeleccionados(sesionId)
+                    },
+                    enabled = horariosSeleccionados.isNotEmpty()
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.hideConfirmDialog() }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // AlertDialog para confirmar eliminación de jugador
+    if (showEliminarJugadorDialog.value && jugadorAEliminar.value != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showEliminarJugadorDialog.value = false
+                jugadorAEliminar.value = null
+            },
+            title = { Text("Delete Player") },
+            text = {
+                Column {
+                    Text("Are you sure you want to delete this player?")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Email: ${jugadorAEliminar.value?.email}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "This action cannot be undone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        jugadorAEliminar.value?.let { jugador ->
+                            viewModel.eliminarJugador(sesionId, jugador.email)
+                        }
+                        showEliminarJugadorDialog.value = false
+                        jugadorAEliminar.value = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showEliminarJugadorDialog.value = false
+                        jugadorAEliminar.value = null
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Mostrar Toast si hay mensaje
+    LaunchedEffect(toastMessage) {
+        toastMessage?.let { message ->
+            // El Toast se maneja automáticamente en el ViewModel
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = "Session Details",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { onBack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            if (esJugador && sesionData?.listaHorarios?.isNotEmpty() == true) {
+                FloatingActionButton(
+                    onClick = {
+                        viewModel.showConfirmDialog()
+                    },
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = "Confirm Date")
+                }
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
+        ) {
+            // Contenido principal
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
+                    .padding(horizontal = 16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Jugadores (${sesion.jugadores.size}):",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
+                // Mostrar carga
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                    return@Box
+                }
 
-                    if (sesion.jugadoresConNombres.isNotEmpty()) {
-                        LazyColumn(
+                // Mostrar error si existe
+                if (error.isNotEmpty()) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        Button(onClick = { viewModel.clearError() }) {
+                            Text("Intentar de nuevo")
+                        }
+                    }
+                    return@Box
+                }
+
+                // Mostrar datos de la sesión
+                sesionData?.let { sesion ->
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = sesion.nombre,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Row(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 200.dp)
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
-                            items(sesion.jugadoresConNombres) { jugador ->
+                            Text(
+                                text = "ID: ${sesion.id.take(8)}...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            IconButton(
+                                onClick = {
+                                    clipboard.setText(AnnotatedString(sesion.id))
+                                    viewModel.showToast("ID copied")
+                                },
+                                modifier = Modifier.size(20.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "Copy ID",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+
+                        // Descripción
+                        if (sesion.descripcion.isNotEmpty()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = sesion.descripcion,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        }
+
+                        // Información del Master
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Text(
+                                    text = "Master: ",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            painter = if (jugador.esMaster) painterResource(id = R.drawable.dice_24) else  painterResource(id = R.drawable.sword_24),
-                                            contentDescription = "Jugador",
-                                            tint = if (jugador.esMaster) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.dice_24),
+                                        contentDescription = "Master",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
                                         Text(
-                                            text = jugador.nombre,
-                                            style = MaterialTheme.typography.bodyMedium
+                                            text = sesion.masterNombre,
+                                            style = MaterialTheme.typography.bodyLarge
                                         )
-                                    }
-                                    if (jugador.esMaster) {
                                         Text(
-                                            text = "Master",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.Bold
+                                            text = sesion.masterEmail,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
-                                if (jugador != sesion.jugadoresConNombres.last()) {
-                                    Divider(
-                                        modifier = Modifier.padding(vertical = 4.dp),
-                                        thickness = 0.5.dp
+                            }
+                        }
+
+                        // Lista de Jugadores con opción de eliminación (solo para master)
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                val numJugadores = maxOf(0, sesion.jugadores.size - 1)
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Players:",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    ) {
+                                        Text(text = "$numJugadores")
+                                    }
+                                }
+
+                                if (numJugadores > 0) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    val jugadoresList = sesion.jugadores.filter { it != sesion.masterEmail }
+                                    LazyColumn(
+                                        modifier = Modifier.heightIn(max = 200.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        items(jugadoresList) { jugadorEmail ->
+                                            val jugadorNombre = remember(jugadorEmail) {
+                                                derivedStateOf {
+                                                    jugadorEmail.substringBefore("@")
+                                                }
+                                            }.value
+
+                                            Surface(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 4.dp),
+                                                shape = MaterialTheme.shapes.small,
+                                                color = MaterialTheme.colorScheme.surfaceVariant
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(
+                                                        painter = painterResource(id = R.drawable.sword_24),
+                                                        contentDescription = "Player",
+                                                        tint = MaterialTheme.colorScheme.secondary,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Column(
+                                                        modifier = Modifier.weight(1f)
+                                                    ) {
+                                                        Text(
+                                                            text = jugadorNombre,
+                                                            style = MaterialTheme.typography.bodyMedium
+                                                        )
+                                                        Text(
+                                                            text = jugadorEmail,
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                    if (jugadorEmail == email) {
+                                                        Badge(
+                                                            containerColor = MaterialTheme.colorScheme.secondary,
+                                                            contentColor = MaterialTheme.colorScheme.onSecondary
+                                                        ) {
+                                                            Text("TÚ")
+                                                        }
+                                                    }
+
+                                                    if (esMaster && jugadorEmail != email) {
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        IconButton(
+                                                            onClick = {
+                                                                jugadorAEliminar.value = JugadorAEliminar(
+                                                                    email = jugadorEmail,
+                                                                    nombre = jugadorNombre
+                                                                )
+                                                                showEliminarJugadorDialog.value = true
+                                                            },
+                                                            modifier = Modifier.size(24.dp)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Delete,
+                                                                contentDescription = "Eliminar jugador",
+                                                                tint = MaterialTheme.colorScheme.error,
+                                                                modifier = Modifier.size(16.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "No hay jugadores en esta sesión",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontStyle = FontStyle.Italic,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
                                     )
                                 }
                             }
                         }
-                    } else {
-                        Text(
-                            text = "No hay jugadores en esta sesión",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontStyle = FontStyle.Italic,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                }
-            }
 
-            // Horarios de votación
-            horariosVotacion?.let { votacion ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Horarios propuestos:",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Badge(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        if (sesion.horarioActual.isNotEmpty()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(text = "${votacion.aceptados} aceptados")
+                                Column(
+                                    modifier = Modifier.padding(16.dp)
+                                ) {
+                                    Text(
+                                        text = "Horario actual:",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(bottom = 4.dp)
+                                    )
+                                    Text(
+                                        text = sesion.horarioActual,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
                         }
 
-                        if (votacion.sesion.isNotEmpty()) {
-                            LazyColumn(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(max = 150.dp)
-                                    .padding(top = 8.dp)
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
                             ) {
-                                items(votacion.sesion) { horario ->
-                                    Row(
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Dates available:",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Row {
+                                        Badge(
+                                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                        ) {
+                                            Text(text = "${sesion.listaHorarios.size}")
+                                        }
+
+                                        if (esMaster) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            IconButton(
+                                                onClick = { viewModel.showAddHorarioDialog() },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Add,
+                                                    contentDescription = "Añadir horario",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (sesion.listaHorarios.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    LazyColumn(
+                                        modifier = Modifier.heightIn(max = 300.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        items(sesion.listaHorarios) { horario ->
+                                            val aceptaciones = sesion.listaAceptaciones[horario] ?: emptyList()
+
+                                            val todosLosJugadoresAceptaron = if (sesion.jugadoresNoMaster.isNotEmpty()) {
+                                                val jugadoresAceptaron = aceptaciones.filter { it != sesion.masterEmail }
+                                                jugadoresAceptaron.size >= sesion.jugadoresNoMaster.size
+                                            } else {
+                                                true
+                                            }
+
+                                            val usuarioAcepto = horario in sesion.usuarioHaAceptado
+
+                                            HorarioCard(
+                                                horario = horario,
+                                                aceptaciones = aceptaciones,
+                                                todosLosJugadoresAceptaron = todosLosJugadoresAceptaron,
+                                                totalJugadores = sesion.jugadoresNoMaster.size,
+                                                usuarioAcepto = usuarioAcepto,
+                                                esMaster = esMaster,
+                                                esJugador = esJugador,
+                                                seleccionado = horario in horariosSeleccionados,
+                                                onToggleSeleccion = {
+                                                    if (esJugador && !usuarioAcepto) {
+                                                        viewModel.toggleHorarioSeleccionado(horario)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = if (esMaster) {
+                                            "No Dates available"
+                                        } else {
+                                            "The master hasn´t added any dates yet"
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontStyle = FontStyle.Italic,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                            .padding(vertical = 8.dp)
+                                    )
+
+                                    if (esMaster) {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Button(
+                                            onClick = { viewModel.showAddHorarioDialog() },
+                                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                                        ) {
+                                            Icon(Icons.Default.Add, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("Add first date")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                sesion.fechaCreacion?.let { timestamp ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(bottom = 8.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.Schedule,
-                                            contentDescription = "Horario",
-                                            tint = MaterialTheme.colorScheme.secondary,
+                                            imageVector = Icons.Default.CalendarToday,
+                                            contentDescription = "Fecha creación",
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = horario,
-                                            style = MaterialTheme.typography.bodyMedium
+                                            text = "Creada el: ${formatDate(timestamp.toDate())}",
+                                            style = MaterialTheme.typography.bodySmall
                                         )
                                     }
                                 }
-                            }
-                        } else {
-                            Text(
-                                text = "No hay horarios propuestos aún",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontStyle = FontStyle.Italic,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                    }
-                }
-            }
 
-            // Horarios de la sesión (lista original)
-            if (sesion.horarios.isNotEmpty()) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Horarios definidos:",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 150.dp)
-                        ) {
-                            items(sesion.horarios) { horario ->
-                                Text(
-                                    text = "• $horario",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(vertical = 2.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Email,
+                                        contentDescription = "Tu email",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = "Your email: $email",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        if (esMaster) {
+                                            Text(
+                                                text = "Role: MASTER",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        } else if (esJugador) {
+                                            Text(
+                                                text = "Role: PLAYER",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.secondary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Instrucciones para jugador
+                        if (esJugador && sesion.listaHorarios.isNotEmpty()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.1f)
                                 )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Info,
+                                            contentDescription = "Instrucciones",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Rules :",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Text(
+                                        text = "1. Sellect the date you want to accept\n" +
+                                                "2. Press the floating button to accept the date.\n" +
+                                                "3. The dates will check when all players accept that date\n" +
+                                                "4. The Master can see if a date is available for all players",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        // Toast/Snackbar para mensajes
+                        if (toastMessage != null) {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Éxito",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = toastMessage!!,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
                             }
                         }
                     }
-                }
-            }
-
-            // Información adicional
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    // Fecha de creación
-                    sesion.fechaCreacion?.let { timestamp ->
-                        Row(
-                            modifier = Modifier.padding(bottom = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                } ?: run {
+                    // Si no hay datos pero tampoco hay error
+                    if (error.isEmpty()) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = "Fecha creación",
-                                modifier = Modifier.size(16.dp)
+                                imageVector = Icons.Default.ErrorOutline,
+                                contentDescription = "Sin datos",
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Creada el: ${formatDate(timestamp.toDate())}",
-                                style = MaterialTheme.typography.bodySmall
+                                text = "There is no data",
+                                style = MaterialTheme.typography.bodyLarge
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+}
 
-                    // Información del usuario actual
+// Componente para mostrar cada horario
+@Composable
+fun HorarioCard(
+    horario: String,
+    aceptaciones: List<String>,
+    todosLosJugadoresAceptaron: Boolean,
+    totalJugadores: Int, // <-- Total de jugadores (no masters)
+    usuarioAcepto: Boolean,
+    esMaster: Boolean,
+    esJugador: Boolean,
+    seleccionado: Boolean,
+    onToggleSeleccion: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        color = if (todosLosJugadoresAceptaron) {
+            // Color verde cuando todos los jugadores han aceptado
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        },
+        border = if (todosLosJugadoresAceptaron) {
+            CardDefaults.outlinedCardBorder()
+        } else {
+            null
+        },
+        tonalElevation = if (todosLosJugadoresAceptaron) 2.dp else 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Checkbox para jugadores (solo si no han aceptado aún)
+            if (esJugador && !usuarioAcepto) {
+                Checkbox(
+                    checked = seleccionado,
+                    onCheckedChange = { onToggleSeleccion() },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            } else if (esMaster) {
+                // El master ve un icono diferente
+                Icon(
+                    imageVector = Icons.Default.Create,
+                    contentDescription = "Creado por el master",
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            } else {
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+
+            // Información del horario
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = horario,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = if (todosLosJugadoresAceptaron) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+
+                    // Icono de check si el usuario ya aceptó
+                    if (usuarioAcepto) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Horario aceptado",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                // Información de aceptaciones (mostrar cuántos jugadores han aceptado)
+                Spacer(modifier = Modifier.height(4.dp))
+                if (totalJugadores > 0) {
+                    Text(
+                        text = "Accepted by: ${aceptaciones.size} to $totalJugadores players",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (aceptaciones.size == totalJugadores) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                } else {
+                    Text(
+                        text = "There´s no players ",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Indicador visual para horarios aceptados por todos los jugadores
+            if (todosLosJugadoresAceptaron) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Badge(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Email,
-                            contentDescription = "Tu email",
-                            modifier = Modifier.size(16.dp)
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Disponible",
+                            modifier = Modifier.size(10.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Tu email: $email",
-                            style = MaterialTheme.typography.bodySmall
+                            text = "AVAILABLE",
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
-
-            // ID de sesión (para debug - opcional)
-            Text(
-                text = "ID: $sesionId",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        } ?: run {
-            // Si no hay datos pero tampoco hay error
-            if (error.isEmpty()) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ErrorOutline,
-                        contentDescription = "Sin datos",
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "No se encontraron datos de la sesión",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Botón para volver
-        Button(
-            onClick = { onBack() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        ) {
-            Text(
-                text = "Volver",
-                style = MaterialTheme.typography.bodyLarge
-            )
         }
     }
 }

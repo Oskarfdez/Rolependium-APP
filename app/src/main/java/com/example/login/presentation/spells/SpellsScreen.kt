@@ -1,5 +1,6 @@
 package com.example.login.presentation.spells
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -22,29 +24,44 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.login.presentation.components.BottomBar
 import com.example.login.presentation.components.TopBar
+import com.example.login.ui.theme.LoginTheme
+import com.example.login.R
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpellsScreen(
-                  email: String,
-                    onNavigateToList: () -> Unit,
-                  onNavigateToUser: () -> Unit,
-                  onNavigateToHome: () -> Unit,
-                  onNavigateToDice: () -> Unit,
-                  onNavigateToSpells: () -> Unit,
-                  onNavigateToSpellInfo: (
-                      name: String,
-                      level: String,
-                      school: String,
-                      classes: String,
-                      description: String
-                  ) -> Unit,  // <-- Nuevo parámetro
-                  onBack: () -> Unit
+    email: String,
+    onNavigateToList: () -> Unit,
+    onNavigateToUser: () -> Unit,
+    onNavigateToHome: () -> Unit,
+    onNavigateToDice: () -> Unit,
+    onNavigateToSpells: () -> Unit,
+    onNavigateToSpellInfo: (
+        name: String,
+        level: String,
+        school: String,
+        classes: String,
+        description: String
+    ) -> Unit,  // <-- Nuevo parámetro
+    onBack: () -> Unit
 ) {
     val viewModel: SpellsViewModel = viewModel()
     val context = LocalContext.current
     val spells by viewModel.spells.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    // Mapa de imágenes para cada escuela de conjuros
+    val spellSchoolImages = mapOf(
+        "Abjuration" to R.drawable.abjuracion,
+        "Conjuration" to R.drawable.conjuracion,
+        "Divination" to R.drawable.adivinacion,
+        "Enchantment" to R.drawable.encantamiento,
+        "Evocation" to R.drawable.evocacion,
+        "Illusion" to R.drawable.ilusion,
+        "Necromancy" to R.drawable.nigromancia,
+        "Transmutation" to R.drawable.transmutacion
+    )
 
     // Estados para los filtros
     var searchQuery by remember { mutableStateOf("") }
@@ -137,7 +154,7 @@ fun SpellsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Buscar por nombre...") },
+                placeholder = { Text("Search by name...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -169,7 +186,8 @@ fun SpellsScreen(
                         selectedLevel = null
                         selectedSchool = null
                         selectedClass = null
-                    }
+                    },
+                    spellSchoolImages = spellSchoolImages
                 )
             }
 
@@ -180,7 +198,8 @@ fun SpellsScreen(
                 selectedClass = selectedClass,
                 onRemoveLevel = { selectedLevel = null },
                 onRemoveSchool = { selectedSchool = null },
-                onRemoveClass = { selectedClass = null }
+                onRemoveClass = { selectedClass = null },
+                spellSchoolImages = spellSchoolImages
             )
 
             if (isLoading) {
@@ -194,7 +213,7 @@ fun SpellsScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         CircularProgressIndicator()
-                        Text("Cargando conjuros...")
+                        Text("Loading spells...")
                     }
                 }
             } else if (filteredSpells.isEmpty()) {
@@ -216,9 +235,9 @@ fun SpellsScreen(
                         Text(
                             text = if (searchQuery.isNotEmpty() || selectedLevel != null ||
                                 selectedSchool != null || selectedClass != null) {
-                                "No se encontraron conjuros con los filtros aplicados"
+                                "No spells found with the applied filters"
                             } else {
-                                "No se encontraron conjuros"
+                                "No spells found"
                             },
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -234,7 +253,7 @@ fun SpellsScreen(
                                     selectedClass = null
                                 }
                             ) {
-                                Text("Limpiar todos los filtros")
+                                Text("Clear all filters")
                             }
                         }
                     }
@@ -242,7 +261,7 @@ fun SpellsScreen(
             } else {
                 // Contador de resultados
                 Text(
-                    text = "${filteredSpells.size} conjuro${if (filteredSpells.size != 1) "s" else ""} encontrado${if (filteredSpells.size != 1) "s" else ""}",
+                    text = "${filteredSpells.size} spell${if (filteredSpells.size != 1) "s" else ""} found",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -257,7 +276,11 @@ fun SpellsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(filteredSpells) { spell ->
-                        CartaItem(spell = spell, onNavigateToSpellInfo = onNavigateToSpellInfo)
+                        CartaItem(
+                            spell = spell,
+                            onNavigateToSpellInfo = onNavigateToSpellInfo,
+                            spellSchoolImages = spellSchoolImages
+                        )
                     }
                 }
             }
@@ -274,7 +297,8 @@ fun FilterPanel(
     onSchoolSelected: (String) -> Unit,
     selectedClass: String?,
     onClassSelected: (String) -> Unit,
-    onClearFilters: () -> Unit
+    onClearFilters: () -> Unit,
+    spellSchoolImages: Map<String, Int>
 ) {
     Card(
         modifier = Modifier
@@ -287,7 +311,7 @@ fun FilterPanel(
     ) {
         Column(//Columna Scrolleable
             modifier = Modifier.padding(16.dp)
-            .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState())
         ) {
             // Header con botón para limpiar filtros
             Row(
@@ -296,13 +320,13 @@ fun FilterPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Filtros",
+                    text = "Filters",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 TextButton(onClick = onClearFilters) {
-                    Text("Limpiar todo")
+                    Text("Clear all")
                 }
             }
 
@@ -313,7 +337,7 @@ fun FilterPanel(
 
             // Filtro por nivel
             Text(
-                text = "Nivel",
+                text = "Level",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -329,7 +353,7 @@ fun FilterPanel(
                         onClick = { onLevelSelected(level) },
                         label = {
                             Text(
-                                if (level == 0) "Truco" else level.toString(),
+                                if (level == 0) "Cantrip" else level.toString(),
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                             )
                         },
@@ -360,7 +384,7 @@ fun FilterPanel(
 
             // Filtro por escuela
             Text(
-                text = "Escuela",
+                text = "School",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -382,14 +406,26 @@ fun FilterPanel(
 
                 schools.forEach { school ->
                     val isSelected = selectedSchool == school
+                    val schoolImage = spellSchoolImages.getOrDefault(school, R.drawable.scroll_24)
+
                     FilterChip(
                         selected = isSelected,
                         onClick = { onSchoolSelected(school) },
                         label = {
-                            Text(
-                                school,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = schoolImage),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    school,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
                         },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -418,7 +454,7 @@ fun FilterPanel(
 
             // Filtro por clase
             Text(
-                text = "Clase",
+                text = "Class",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -485,7 +521,8 @@ fun ActiveFiltersRow(
     selectedClass: String?,
     onRemoveLevel: () -> Unit,
     onRemoveSchool: () -> Unit,
-    onRemoveClass: () -> Unit
+    onRemoveClass: () -> Unit,
+    spellSchoolImages: Map<String, Int>
 ) {
     val hasFilters = selectedLevel != null || selectedSchool != null || selectedClass != null
 
@@ -497,7 +534,7 @@ fun ActiveFiltersRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "Filtros:",
+                text = "Active filters:",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -506,7 +543,7 @@ fun ActiveFiltersRow(
                 SuggestionChip(
                     onClick = onRemoveLevel,
                     label = {
-                        Text("Nivel: ${if (it == 0) "Truco" else it}")
+                        Text("Level: ${if (it == 0) "Cantrip" else it}")
                     },
                     icon = {
                         Icon(
@@ -519,9 +556,22 @@ fun ActiveFiltersRow(
             }
 
             selectedSchool?.let {
+                val schoolImage = spellSchoolImages.getOrDefault(it, R.drawable.scroll_24)
                 SuggestionChip(
                     onClick = onRemoveSchool,
-                    label = { Text(it) },
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = schoolImage),
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(it)
+                        }
+                    },
                     icon = {
                         Icon(
                             Icons.Default.Close,
@@ -550,13 +600,18 @@ fun ActiveFiltersRow(
 }
 
 @Composable
-fun CartaItem(spell: SpellsState,  onNavigateToSpellInfo: (
-    name: String,
-    level: String,
-    school: String,
-    classes: String,
-    description: String
-) -> Unit, ) {
+fun CartaItem(
+    spell: SpellsState,
+    onNavigateToSpellInfo: (
+        name: String,
+        level: String,
+        school: String,
+        classes: String,
+        description: String
+    ) -> Unit,
+    spellSchoolImages: Map<String, Int>
+) {
+    val spellImage = spellSchoolImages.getOrDefault(spell.escuela, R.drawable.scroll_24)
 
     Card(
         modifier = Modifier.fillMaxWidth().
@@ -585,7 +640,7 @@ fun CartaItem(spell: SpellsState,  onNavigateToSpellInfo: (
                     modifier = Modifier.padding(end = 12.dp)
                 ) {
                     Text(
-                        text = if (spell.nivel == 0) "Truco" else "Nvl ${spell.nivel}",
+                        text = if (spell.nivel == 0) "Cantrip" else "Lvl ${spell.nivel}",
                         color = MaterialTheme.colorScheme.onPrimary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -607,20 +662,31 @@ fun CartaItem(spell: SpellsState,  onNavigateToSpellInfo: (
             // Información en filas
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Escuela
-                Column {
-                    Text(
-                        text = "Escuela",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                // Escuela con icono
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = spellImage),
+                        contentDescription = "${spell.escuela} school icon",
+                        modifier = Modifier.size(32.dp)
                     )
-                    Text(
-                        text = spell.escuela,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Column {
+                        Text(
+                            text = "School",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = spell.escuela,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
 
                 // Clases
@@ -628,7 +694,7 @@ fun CartaItem(spell: SpellsState,  onNavigateToSpellInfo: (
                     horizontalAlignment = Alignment.End
                 ) {
                     Text(
-                        text = "Clases",
+                        text = "Classes",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -644,53 +710,4 @@ fun CartaItem(spell: SpellsState,  onNavigateToSpellInfo: (
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun SpellsScreenPreview() {
-    MaterialTheme {
-        SpellsScreen(
-            onNavigateToList = {},
-            onNavigateToDice = {},
-            onNavigateToUser = {},
-            onNavigateToHome = {},
-            onBack = {},
-            onNavigateToSpells = {},
-            onNavigateToSpellInfo = { _, _, _, _, _ -> },
-            email = ""
-        )
-    }
-}
 
-@Preview
-@Composable
-fun FilterPanelPreview() {
-    MaterialTheme {
-        FilterPanel(
-            selectedLevel = 3,
-            onLevelSelected = {},
-            selectedSchool = "Evocation",
-            onSchoolSelected = {},
-            selectedClass = "Wizard",
-            onClassSelected = {},
-            onClearFilters = {}
-        )
-    }
-}
-
-@Preview
-@Composable
-fun CartaItemPreview() {
-    val spellEjemplo = SpellsState(
-        nombre = "Fireball",
-        escuela = "Evocation",
-        nivel = 3,
-        clases = "Sorcerer, Wizard",
-        descripcion = "A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame."
-    )
-
-    MaterialTheme {
-        CartaItem(spell = spellEjemplo, onNavigateToSpellInfo = {
-            _, _, _, _, _ ->
-        })
-    }
-}

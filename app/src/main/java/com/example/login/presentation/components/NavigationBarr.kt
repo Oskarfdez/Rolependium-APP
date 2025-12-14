@@ -20,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import com.example.login.ui.theme.ROLERED
 import com.example.login.R
 
 
@@ -42,7 +41,7 @@ import com.example.login.R
                     )
                 },
                 label = {
-                    Text("Menú")
+                    Text("Sessions")
                 },
                 selected = false,
                 onClick = {
@@ -57,7 +56,7 @@ import com.example.login.R
                     )
                 },
                 label = {
-                    Text("Personajes")
+                    Text("Characters")
                 },
                 selected = false,
                 onClick = {
@@ -72,7 +71,7 @@ import com.example.login.R
                     )
                 },
                 label = {
-                    Text("Conjuros")
+                    Text("Spells")
                 },
                 selected = false,
                 onClick = {
@@ -87,7 +86,7 @@ import com.example.login.R
                     )
                 },
                 label = {
-                    Text("Dado")
+                    Text("Dice Roller")
                 },
                 selected = false,
                 onClick = {
@@ -109,16 +108,8 @@ fun TopBar(
 
     CenterAlignedTopAppBar(
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = ROLERED,
-            titleContentColor = Color.White,
-            navigationIconContentColor = Color.White,
-            actionIconContentColor = Color.White
-        ),
-        navigationIcon = {
-            IconButton(onClick = {onBack()}) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
-            }
-        },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant),
+
         title = {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 Text(text = "ROLEPENDIUM")
@@ -126,7 +117,7 @@ fun TopBar(
         },
         actions = {
             IconButton(onClick = { onNavigateToUser()}) {
-                Icon(imageVector = Icons.Default.AccountCircle, contentDescription = "Perfil")
+                Icon(imageVector = Icons.Default.AccountCircle, contentDescription = "User")
             }
         }
     )

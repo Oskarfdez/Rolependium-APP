@@ -14,14 +14,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.login.presentation.components.BottomBar
 import com.example.login.presentation.components.TopBar
-import java.text.SimpleDateFormat
-import java.util.*
+import com.example.login.presentation.sesioncreator.SesionState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,15 +37,77 @@ fun SesionScreen(
     val viewModel: SesionViewModel = viewModel()
     val context = LocalContext.current
 
-    // Estados observados del ViewModel
+    // Estados para unirse
+    var sesionIdInput by remember { mutableStateOf("") }
+    val showJoinDialog by viewModel.showJoinDialog.collectAsState()
+    val joinDialogMessage by viewModel.joinDialogMessage.collectAsState()
+
+    // States
     val isLoading by viewModel.isLoading.collectAsState()
     val sesiones by viewModel.sesiones.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    // Inicializar el email y cargar sesiones
+    // Cargar sesiones al iniciar
     LaunchedEffect(email) {
         viewModel.setEmail(email)
         viewModel.loadSesiones(context)
+    }
+
+    // AlertDialog
+    if (showJoinDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.hideJoinDialog() },
+            title = { Text("Join Session") },
+            text = {
+                Column {
+                    Text("Enter the session ID")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = sesionIdInput,
+                        onValueChange = { sesionIdInput = it },
+                        label = { Text("Session ID") },
+                        placeholder = { Text("Ex: abc123def456") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    if (joinDialogMessage.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = joinDialogMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (joinDialogMessage.contains("Error") || joinDialogMessage.contains("Error")) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (sesionIdInput.isNotBlank()) {
+                            viewModel.joinSesion(sesionIdInput, context)
+                        }
+                    },
+                    enabled = sesionIdInput.isNotBlank() && joinDialogMessage.isEmpty()
+                ) {
+                    Text("Join")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.hideJoinDialog()
+                        sesionIdInput = ""
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -69,23 +129,20 @@ fun SesionScreen(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Botón para recargar
                 FloatingActionButton(
                     onClick = {
-                        viewModel.loadSesiones(context)
+                        viewModel.showJoinDialog()
                     },
                     containerColor = MaterialTheme.colorScheme.secondary
                 ) {
-                    Icon(Icons.Default.Refresh, "Recargar sesiones")
+                    Icon(Icons.Default.GroupAdd, "Join session")
                 }
-
-                // Botón para crear nueva sesión
                 FloatingActionButton(
                     onClick = {
                         onNavigateToCreator()
                     }
                 ) {
-                    Icon(Icons.Default.Add, "Crear nueva sesión")
+                    Icon(Icons.Default.Add, "Create Session")
                 }
             }
         }
@@ -95,9 +152,8 @@ fun SesionScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Título de la pantalla
             Text(
-                text = "Mis Sesiones: $email",
+                text = "My sessions",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -106,20 +162,46 @@ fun SesionScreen(
                     .padding(top = 16.dp, bottom = 8.dp)
             )
 
-            // Contador de sesiones
+            // Email usuario
+            Text(
+                text = email,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
+
+            // sesiones
             if (!isLoading && sesiones.isNotEmpty()) {
-                Text(
-                    text = "${sesiones.size} sesión${if (sesiones.size != 1) "es" else ""}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                )
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "${sesiones.size} sesión${if (sesiones.size != 1) "es" else ""}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Botón de recargar
+                    IconButton(
+                        onClick = { viewModel.loadSesiones(context) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Recargar sesiones",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
 
             if (isLoading) {
-                // Estado de carga
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -129,11 +211,11 @@ fun SesionScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         CircularProgressIndicator()
-                        Text("Cargando sesiones...")
+                        Text("Loading Sessions...")
                     }
                 }
             } else if (error.isNotEmpty()) {
-                // Estado de error
+                //error
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -162,7 +244,6 @@ fun SesionScreen(
                     }
                 }
             } else if (sesiones.isEmpty()) {
-                // Estado vacío
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -178,21 +259,46 @@ fun SesionScreen(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "No estás en ninguna sesión",
+                            text = "You aren´t in any session",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
                         Text(
-                            text = "Únete a una sesión existente o crea una nueva",
+                            text = "Join a session or create a new one",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(top = 24.dp)
+                        ) {
+                            Button(
+                                onClick = { viewModel.showJoinDialog() }
+                            ) {
+                                Icon(Icons.Default.GroupAdd, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Join a session")
+                            }
+
+                            Button(
+                                onClick = { onNavigateToCreator() },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Create a session")
+                            }
+                        }
                     }
                 }
             } else {
-                // Lista de sesiones
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -230,7 +336,6 @@ fun SesionCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            // Encabezado con nombre y badge si es master
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -255,12 +360,23 @@ fun SesionCard(
                             fontWeight = FontWeight.Bold
                         )
                     }
+                } else if (sesion.jugadores.contains(currentUserEmail)) {
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(start = 8.dp)
+                    ) {
+                        Text(
+                            text = "PLAYER",
+                            color = MaterialTheme.colorScheme.onSecondary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Información de la sesión
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -275,9 +391,9 @@ fun SesionCard(
                     )
                     Text(
                         text = if (sesion.masterEmail == currentUserEmail) {
-                            "Tú"
+                            "YOU"
                         } else {
-                            sesion.masterNombre ?: "Cargando..."
+                            sesion.masterNombre ?: "Loading..."
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
@@ -289,42 +405,40 @@ fun SesionCard(
                     )
                 }
 
-                // Jugadores
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Jugadores:",
+                        text = "ID:",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${sesion.jugadores.size} jugador${if (sesion.jugadores.size != 1) "es" else ""}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
+                        text = sesion.id.take(12) + if (sesion.id.length > 12) "..." else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                // Fecha de creación
                 sesion.fechaCreacion?.let { fecha ->
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "Creada:",
+                            text = "Created:",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = formatDate(fecha),
+                            text = fecha.toDate().toString(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
-
-            // Descripción
             sesion.descripcion?.let { descripcion ->
                 if (descripcion.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -346,77 +460,3 @@ fun SesionCard(
     }
 }
 
-// Función para formatear la fecha
-private fun formatDate(timestamp: com.google.firebase.Timestamp): String {
-    val date = timestamp.toDate()
-    val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-    return sdf.format(date)
-}
-
-// Data class para el estado de la sesión
-
-@Preview(showBackground = true)
-@Composable
-fun SesionScreenPreview() {
-    MaterialTheme {
-        SesionScreen(
-            email = "usuario@ejemplo.com",
-            onNavigateToList = {},
-            onNavigateToDice = {},
-            onNavigateToUser = {},
-            onNavigateToHome = {},
-            onNavigateToSpells = {},
-            onNavigateToCreator = {},
-            onNavigateToData = {},
-            onBack = {}
-        )
-    }
-}
-
-@Preview
-@Composable
-fun SesionCardPreview() {
-    val sesionEjemplo = SesionState(
-        id = "1",
-        nombre = "La Búsqueda del Dragón",
-        descripcion = "Una épica aventura para derrotar al dragón ancestral que amenaza el reino.",
-        masterEmail = "master@ejemplo.com",
-        masterNombre = "Gandalf",
-        jugadores = listOf("player1@ejemplo.com", "player2@ejemplo.com"),
-        horarios = emptyList(),
-        notificaciones = emptyList(),
-        fechaCreacion = com.google.firebase.Timestamp.now()
-    )
-
-    MaterialTheme {
-        SesionCard(
-            sesion = sesionEjemplo,
-            currentUserEmail = "player1@ejemplo.com",
-            onNavigateToData = {}
-        )
-    }
-}
-
-@Preview
-@Composable
-fun SesionCardMasterPreview() {
-    val sesionEjemplo = SesionState(
-        id = "2",
-        nombre = "Mi Aventura",
-        descripcion = "Sesión donde soy el master",
-        masterEmail = "yo@ejemplo.com",
-        masterNombre = "Yo Mismo",
-        jugadores = listOf("otro@ejemplo.com"),
-        horarios = emptyList(),
-        notificaciones = emptyList(),
-        fechaCreacion = com.google.firebase.Timestamp.now()
-    )
-
-    MaterialTheme {
-        SesionCard(
-            sesion = sesionEjemplo,
-            currentUserEmail = "yo@ejemplo.com",
-            onNavigateToData = {}
-        )
-    }
-}

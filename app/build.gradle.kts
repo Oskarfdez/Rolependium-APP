@@ -75,6 +75,9 @@ dependencies {
     implementation(libs.firebase.storage.ktx)
     implementation(libs.volley)
     implementation(libs.androidx.runtime.livedata)
+    implementation(libs.androidx.compose.ui.text)
+    implementation(libs.androidx.compose.ui.text.google.fonts)
+    implementation(libs.androidx.compose.foundation)
     kapt(libs.hilt.compiler)
 
     implementation(libs.material)
