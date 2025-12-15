@@ -20,51 +20,47 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 
 
-// Composable que muestra un diálogo de error con un mensaje y un botón para cerrarlo
 @Composable
 fun EventDialog(
-    modifier: Modifier = Modifier,  // Modificador opcional para personalizar el diseño del diálogo
-    @StringRes errorMessage: Int,  // ID del recurso de cadena con el mensaje de error que se mostrará
-    onDismiss: (() -> Unit)? = null  // Función que se ejecuta cuando el diálogo es cerrado (opcional)
+    modifier: Modifier = Modifier,
+    @StringRes errorMessage: Int,
+    onDismiss: (() -> Unit)? = null
 ) {
-    // Creamos un AlertDialog que se utiliza para mostrar el mensaje de error
     AlertDialog(
-        modifier = modifier  // Aplica el modificador proporcionado, como el padding o fondo
-            .background(androidx.compose.ui.graphics.Color.White)  // Fondo blanco para el diálogo
-            .padding(16.dp),  // Padding alrededor del contenido del diálogo
-        onDismissRequest = { onDismiss?.invoke() },  // Llama a la función de cierre cuando se solicita el cierre del diálogo
+        modifier = modifier
+            .background(androidx.compose.ui.graphics.Color.White)
+            .padding(16.dp),
+        onDismissRequest = { onDismiss?.invoke() },
         title = {
-            // Título del diálogo que dice "Error"
+
             Text(
-                "Error",  // Título estático del diálogo
+                "Error",
                 style = TextStyle(
-                    color = colorScheme.onSurface,  // Color del texto basado en el tema
-                    fontSize = 20.sp,  // Tamaño de la fuente
-                    fontWeight = FontWeight.Bold  // Hace que el título sea en negrita
+                    color = colorScheme.onSurface,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
                 )
             )
         },
         text = {
-            // Cuerpo del diálogo con el mensaje de error, que es un recurso de texto
+
             Text(
-                text = stringResource(errorMessage),  // Obtiene el mensaje de error usando el recurso
+                text = stringResource(errorMessage),
                 style = TextStyle(
-                    color = colorScheme.onSurface,  // Color del texto basado en el tema
-                    fontSize = 16.sp  // Tamaño de la fuente
+                    color = colorScheme.onSurface,
+                    fontSize = 16.sp
                 )
             )
         },
         buttons = {
-            // Coloca el botón "Aceptar" para cerrar el diálogo
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()  // Hace que la fila ocupe el ancho disponible
-                    .padding(8.dp),  // Padding alrededor de la fila de botones
-                horizontalArrangement = Arrangement.End  // Alinea el botón a la derecha
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.End
             ) {
-                // Botón "Aceptar" que cierra el diálogo cuando es presionado
                 TextButton(onClick = { onDismiss?.invoke() }) {
-                    Text(text = "Aceptar", style = MaterialTheme.typography.h5)  // El texto del botón
+                    Text(text = "Accept", style = MaterialTheme.typography.h5)
                 }
             }
 

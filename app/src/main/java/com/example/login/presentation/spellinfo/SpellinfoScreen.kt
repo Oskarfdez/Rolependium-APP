@@ -69,7 +69,6 @@ fun SpellInfoScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Icono de la escuela del conjuro
             val spellImage = spellSchoolImages.getOrDefault(school, R.drawable.scroll_24)
 
             Image(
@@ -113,7 +112,6 @@ fun SpellInfoScreen(
 
                     Divider()
 
-                    // Nivel del conjuro
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -139,7 +137,6 @@ fun SpellInfoScreen(
 
                     Divider()
 
-                    // Escuela del conjuro
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -170,7 +167,6 @@ fun SpellInfoScreen(
 
                     Divider()
 
-                    // Clases que pueden usar el conjuro
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.Top,
@@ -192,7 +188,6 @@ fun SpellInfoScreen(
 
                     Divider()
 
-                    // Descripcion del conjuro
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -214,7 +209,6 @@ fun SpellInfoScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Boton para volver
             Button(
                 onClick = onBack,
                 modifier = Modifier.fillMaxWidth(),

@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.login.R
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -36,37 +37,34 @@ fun SesionDataScreen(
     var nuevoHorario by remember { mutableStateOf("") }
     val showAddHorarioDialog by viewModel.showAddHorarioDialog.collectAsState()
 
-    // Estados para confirmación
     val showConfirmDialog by viewModel.showConfirmDialog.collectAsState()
 
     data class JugadorAEliminar(
         val email: String,
         val nombre: String)
 
-    // Estado para el diálogo de confirmación de eliminación
     val showEliminarJugadorDialog = remember { mutableStateOf(false) }
     val jugadorAEliminar = remember { mutableStateOf<JugadorAEliminar?>(null) }
 
-
+    val showLeaveSessionDialog by viewModel.showLeaveSessionDialog.collectAsState()
+    val showDeleteSessionDialog by viewModel.showDeleteSessionDialog.collectAsState()
 
     val toastMessage by viewModel.toastMessage.collectAsState()
     val horariosSeleccionados by viewModel.horariosSeleccionados.collectAsState()
 
-    // Efecto para cargar los datos cuando se entra a la pantalla
     LaunchedEffect(sesionId) {
         viewModel.loadSesionData(sesionId)
     }
 
-    // Observar los estados del ViewModel
     val isLoading by viewModel.isLoading.collectAsState()
     val sesionData by viewModel.sesionData.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    // Verificar si el usuario actual es el master
     val esMaster = sesionData?.masterEmail == email
     val esJugador = sesionData?.jugadores?.contains(email) == true && !esMaster
 
-    // AlertDialog para añadir horario (solo master)
+
+    //Confirmacion
     if (showAddHorarioDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.hideAddHorarioDialog() },
@@ -109,7 +107,6 @@ fun SesionDataScreen(
         )
     }
 
-    // AlertDialog para confirmar horarios seleccionados
     if (showConfirmDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.hideConfirmDialog() },
@@ -161,7 +158,6 @@ fun SesionDataScreen(
         )
     }
 
-    // AlertDialog para confirmar eliminación de jugador
     if (showEliminarJugadorDialog.value && jugadorAEliminar.value != null) {
         AlertDialog(
             onDismissRequest = {
@@ -215,11 +211,100 @@ fun SesionDataScreen(
             }
         )
     }
+    // DIALOG DE DEJAR SESION SI ERES JUGADOR
+    if (showLeaveSessionDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.hideLeaveSessionDialog() },
+            title = { Text("Leave Session") },
+            text = {
+                Column {
+                    Text("Are you sure you want to leave this session?")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "You will be removed from the player list and your schedule acceptances will be cleared.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "This action cannot be undone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.leaveSession(sesionId, email)
+                        onBack()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Leave Session")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.hideLeaveSessionDialog() }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
-    // Mostrar Toast si hay mensaje
+    // DIALOG DE ELIMINAR SESION SI ERES MASTER
+    if (showDeleteSessionDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.hideDeleteSessionDialog() },
+            title = { Text("Delete Session") },
+            text = {
+                Column {
+                    Text("Are you sure you want to delete this session?")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "All session data including players, schedules, and acceptances will be permanently deleted.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "This action cannot be undone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteSession(sesionId)
+                        onBack()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Delete Session")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.hideDeleteSessionDialog() }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     LaunchedEffect(toastMessage) {
         toastMessage?.let { message ->
-            // El Toast se maneja automáticamente en el ViewModel
         }
     }
 
@@ -235,6 +320,23 @@ fun SesionDataScreen(
                 navigationIcon = {
                     IconButton(onClick = { onBack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            if (esMaster) {
+                                viewModel.showDeleteSessionDialog()
+                            } else if (esJugador) {
+                                viewModel.showLeaveSessionDialog()
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (esMaster) Icons.Default.Delete else Icons.Default.ExitToApp,
+                            contentDescription = if (esMaster) "Delete Session" else "Leave Session",
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
             )
@@ -260,13 +362,11 @@ fun SesionDataScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            // Contenido principal
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
-                // Mostrar carga
                 if (isLoading) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -277,7 +377,6 @@ fun SesionDataScreen(
                     return@Box
                 }
 
-                // Mostrar error si existe
                 if (error.isNotEmpty()) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -297,7 +396,6 @@ fun SesionDataScreen(
                     return@Box
                 }
 
-                // Mostrar datos de la sesión
                 sesionData?.let { sesion ->
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -339,7 +437,7 @@ fun SesionDataScreen(
                             }
                         }
 
-                        // Descripción
+
                         if (sesion.descripcion.isNotEmpty()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth()
@@ -352,7 +450,6 @@ fun SesionDataScreen(
                             }
                         }
 
-                        // Información del Master
                         Card(
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -390,7 +487,6 @@ fun SesionDataScreen(
                             }
                         }
 
-                        // Lista de Jugadores con opción de eliminación (solo para master)
                         Card(
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -700,7 +796,6 @@ fun SesionDataScreen(
                             }
                         }
 
-                        // Instrucciones para jugador
                         if (esJugador && sesion.listaHorarios.isNotEmpty()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -740,7 +835,6 @@ fun SesionDataScreen(
                             }
                         }
 
-                        // Toast/Snackbar para mensajes
                         if (toastMessage != null) {
                             Surface(
                                 modifier = Modifier
@@ -772,7 +866,6 @@ fun SesionDataScreen(
                         }
                     }
                 } ?: run {
-                    // Si no hay datos pero tampoco hay error
                     if (error.isEmpty()) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -798,7 +891,6 @@ fun SesionDataScreen(
     }
 }
 
-// Componente para mostrar cada horario
 @Composable
 fun HorarioCard(
     horario: String,
@@ -834,7 +926,6 @@ fun HorarioCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Checkbox para jugadores (solo si no han aceptado aún)
             if (esJugador && !usuarioAcepto) {
                 Checkbox(
                     checked = seleccionado,
@@ -845,7 +936,6 @@ fun HorarioCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             } else if (esMaster) {
-                // El master ve un icono diferente
                 Icon(
                     imageVector = Icons.Default.Create,
                     contentDescription = "Creado por el master",
@@ -856,8 +946,6 @@ fun HorarioCard(
             } else {
                 Spacer(modifier = Modifier.width(16.dp))
             }
-
-            // Información del horario
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -875,7 +963,6 @@ fun HorarioCard(
                         }
                     )
 
-                    // Icono de check si el usuario ya aceptó
                     if (usuarioAcepto) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(
@@ -887,7 +974,6 @@ fun HorarioCard(
                     }
                 }
 
-                // Información de aceptaciones (mostrar cuántos jugadores han aceptado)
                 Spacer(modifier = Modifier.height(4.dp))
                 if (totalJugadores > 0) {
                     Text(
@@ -908,7 +994,6 @@ fun HorarioCard(
                 }
             }
 
-            // Indicador visual para horarios aceptados por todos los jugadores
             if (todosLosJugadoresAceptaron) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Badge(
@@ -936,7 +1021,6 @@ fun HorarioCard(
     }
 }
 
-// Función auxiliar para formatear fechas
 private fun formatDate(date: Date): String {
     return SimpleDateFormat("dd/MM/yyyy 'a las' HH:mm", Locale.getDefault()).format(date)
 }

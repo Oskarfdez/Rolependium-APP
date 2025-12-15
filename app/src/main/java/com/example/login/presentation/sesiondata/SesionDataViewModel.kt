@@ -17,6 +17,12 @@ class SesionDataViewModel : ViewModel() {
     private val _sesionData = MutableStateFlow<SesionData?>(null)
     val sesionData: StateFlow<SesionData?> = _sesionData
 
+    private val _showLeaveSessionDialog = MutableStateFlow(false)
+    val showLeaveSessionDialog: StateFlow<Boolean> = _showLeaveSessionDialog
+
+    private val _showDeleteSessionDialog = MutableStateFlow(false)
+    val showDeleteSessionDialog: StateFlow<Boolean> = _showDeleteSessionDialog
+
     private val _error = MutableStateFlow("")
     val error: StateFlow<String> = _error
 
@@ -342,6 +348,99 @@ class SesionDataViewModel : ViewModel() {
 
     fun clearError() {
         _error.value = ""
+    }
+
+    //ESTA SERIE DE FUNCIONES SE ENCUENTRAN FUERA DE PLAZO SOLO LAS AÑADÍ POR QUE QUIERO SEGUIR AVANZANDO EN ESTE PROYECTO PERSONALMENTE
+    //(Su funcion es eliminar sesiones y/o jugadores de la base de datos)
+    fun showLeaveSessionDialog() {
+        _showLeaveSessionDialog.value = true
+    }
+
+    fun hideLeaveSessionDialog() {
+        _showLeaveSessionDialog.value = false
+    }
+
+    fun showDeleteSessionDialog() {
+        _showDeleteSessionDialog.value = true
+    }
+
+    fun hideDeleteSessionDialog() {
+        _showDeleteSessionDialog.value = false
+    }
+
+    fun leaveSession(sesionId: String, email: String) {
+        if (sesionId.isEmpty() || email.isEmpty()) {
+            _error.value = "Error: Invalid data"
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                db.collection("sesiones")
+                    .document(sesionId)
+                    .update(
+                        "jugadores", FieldValue.arrayRemove(email),
+                        "ultimaModificacion", com.google.firebase.Timestamp.now()
+                    )
+                    .await()
+
+                val sesionDoc = db.collection("sesiones")
+                    .document(sesionId)
+                    .get()
+                    .await()
+
+                if (!sesionDoc.exists()) {
+                    _error.value = "Error: Session not found"
+                    return@launch
+                }
+
+                val sesion = sesionDoc.toObject(Sesion::class.java)
+                sesion?.horarios?.forEach { (key, value) ->
+                    if (key.startsWith("aceptados_")) {
+                        val aceptaciones = value as? List<String> ?: emptyList()
+                        if (email in aceptaciones) {
+                            val nuevasAceptaciones = aceptaciones.filter { it != email }
+                            db.collection("sesiones")
+                                .document(sesionId)
+                                .update(
+                                    "horarios.$key", nuevasAceptaciones
+                                )
+                                .await()
+                        }
+                    }
+                }
+
+                showToast("You have left the session successfully")
+                hideLeaveSessionDialog()
+
+            } catch (e: Exception) {
+                _error.value = "Error leaving session: ${e.message}"
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun deleteSession(sesionId: String) {
+        if (sesionId.isEmpty()) {
+            _error.value = "Error: Invalid session ID"
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                db.collection("sesiones")
+                    .document(sesionId)
+                    .delete()
+                    .await()
+
+                showToast("Session deleted successfully")
+                hideDeleteSessionDialog()
+
+            } catch (e: Exception) {
+                _error.value = "Error deleting session: ${e.message}"
+                e.printStackTrace()
+            }
+        }
     }
 
 }

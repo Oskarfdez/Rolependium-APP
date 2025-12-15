@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -330,41 +332,30 @@ fun CaracteristicasGrid(
     caracteristicas: List<Map.Entry<String, Int>>,
     imageabilityes: List<Int>
 ) {
-    val items = caracteristicas
-    val rows = items.chunked(2)
+    val items = caracteristicas.take(6)
 
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 500.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        rows.forEachIndexed { rowIndex, rowItems ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                rowItems.forEachIndexed { colIndex, (clave, valor) ->
-                    val index = rowIndex * 2 + colIndex
-                    val image = imageabilityes.getOrNull(index) ?: R.drawable.shield
+        items(items.size) { index ->
+            val (clave, valor) = items[index]
+            val image = imageabilityes.getOrNull(index) ?: R.drawable.shield
 
+            val mod = floor((valor - 10).toDouble() / 2).toInt()
+            val modText = if (mod >= 0) "+$mod" else "$mod"
 
-                    val mod = floor((valor - 10).toDouble() / 2).toInt()
-                    val modText = if (mod >= 0) "+$mod" else "$mod"
-
-                    CompactCaracteristicaCard(
-                        nombre = clave,
-                        valor = valor,
-                        modText = modText,
-                        image = image
-                    )
-                }
-                repeat(2 - rowItems.size) { // ✅ CHANGED: 2 instead of 3
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
+            CompactCaracteristicaCard(
+                nombre = clave,
+                valor = valor,
+                modText = modText,
+                image = image
+            )
         }
     }
 }
@@ -383,29 +374,35 @@ fun CompactCaracteristicaCard(
                 elevation = 3.dp,
                 shape = RoundedCornerShape(12.dp),
                 spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            ).size(120.dp),
+            )
+            .fillMaxWidth(0.48f) // Aprox mitad del ancho
+            .aspectRatio(1f), // Hace que sea cuadrado (ancho = alto)
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 1.dp
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+                .fillMaxSize()
+                .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.SpaceBetween // Distribuye el espacio uniformemente
         ) {
+            // Parte superior: Nombre
             Text(
                 text = nombre,
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1
+                maxLines = 2, // Permite 2 líneas si es necesario
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
 
+            // Parte central: Imagen
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(40.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
@@ -413,34 +410,34 @@ fun CompactCaracteristicaCard(
                 Image(
                     painter = painterResource(id = image),
                     contentDescription = nombre,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(28.dp),
                     alpha = 0.9f
                 )
             }
 
+            // Parte inferior: Valor y Mod
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = valor.toString(),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge, // Un poco más grande
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
 
                 Surface(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                    color = Color.Transparent
+                        .clip(RoundedCornerShape(6.dp)),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                 ) {
                     Text(
                         text = "Mod: $modText",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Normal,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }

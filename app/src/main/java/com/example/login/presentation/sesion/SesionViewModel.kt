@@ -16,7 +16,6 @@ class SesionViewModel : ViewModel() {
     private val _email = MutableStateFlow("")
     private val db = FirebaseFirestore.getInstance()
 
-    // Estados observables
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -48,8 +47,8 @@ class SesionViewModel : ViewModel() {
     }
 
     fun joinSesion(sesionId: String, context: Context) {
-        if (_email.value.isEmpty()) {
-            _error.value = "Error: No se ha configurado el email del usuario"
+        if (_email.value.isEmpty()) {//Este error no deberia de ocurrir mas ya que he suprimido los errores que podrian ocurrir en el login
+            _error.value = "NO HAY EMAIL"
             return
         }
 
@@ -60,7 +59,6 @@ class SesionViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                //Accede a datos
                 val sesionDoc = db.collection("sesiones")
                     .document(sesionId)
                     .get()
@@ -75,16 +73,14 @@ class SesionViewModel : ViewModel() {
                     return@launch
                 }
 
-                //Comprueba si eres master
                 if (sesion.master == _email.value) {
-                    _joinDialogMessage.value = "Error: Ya eres el master de esta sesión"
+                    _joinDialogMessage.value = "Error: Ya eres el master de esta sesion"
                     return@launch
                 }
 
-                //Comprueba si ya estás en la sesión
                 val jugadoresActuales = sesion.jugadores ?: emptyList()
                 if (jugadoresActuales.contains(_email.value)) {
-                    _joinDialogMessage.value = "Error: Ya estás en esta sesión"
+                    _joinDialogMessage.value = "Error: Ya estás en esta sesion"
                     return@launch
                 }
 
@@ -98,11 +94,9 @@ class SesionViewModel : ViewModel() {
 
                 _joinDialogMessage.value = "¡Te has unido a la sesión '${sesion.nombre}' exitosamente!"
 
-                //Recargar la lista de sesiones
                 kotlinx.coroutines.delay(1000)
                 loadSesiones(context)
 
-                //Ocultar el diálogo
                 kotlinx.coroutines.delay(2000)
                 hideJoinDialog()
 
@@ -116,7 +110,6 @@ class SesionViewModel : ViewModel() {
 
     fun loadSesiones(context: Context) {
 
-        // error que ocurre si el valor email está vacío (Esto solo me ocurría cuando añadia los datos de la cuenta manualmente)
         if (_email.value.isEmpty()) {
             _error.value = "Error: No se ha configurado el email del usuario"
             return
@@ -128,13 +121,11 @@ class SesionViewModel : ViewModel() {
             try {
                 val emailUsuario = _email.value
 
-                // Buscar sesiones donde el usuario esta en la lista de jugadores
                 val sesionesDelUsuario = db.collection("sesiones")
                     .whereArrayContains("jugadores", emailUsuario)
                     .get()
                     .await()
 
-                // Convertir a SesionState y obtener nombres
                 val sesionesConNombres = mutableListOf<SesionState>()
 
                 for (doc in sesionesDelUsuario.documents) {
@@ -146,14 +137,11 @@ class SesionViewModel : ViewModel() {
                         getUserName(sesion.master)
                     }
 
-                    // Obtener datos de horarios
                     val horarioActual = sesion.horarios?.get("horario_actual") as? String ?: ""
                     val listaHorarios = sesion.horarios?.get("lista_horarios") as? List<String> ?: emptyList()
 
-                    // Obtener lista de aceptaciones por horario
                     val listaAceptacionesMap = mutableMapOf<String, List<String>>()
 
-                    // Extraer aceptaciones
                     sesion.horarios?.forEach { (key, value) ->
                         if (key.startsWith("aceptados_")) {
                             val horarioKey = key.removePrefix("aceptados_")
@@ -162,7 +150,6 @@ class SesionViewModel : ViewModel() {
                         }
                     }
 
-                    // Verificar si el usuario actual ya ha aceptado algún horario
                     val usuarioHaAceptado = mutableSetOf<String>()
                     listaAceptacionesMap.forEach { (horario, aceptaciones) ->
                         if (emailUsuario in aceptaciones) {
@@ -188,7 +175,6 @@ class SesionViewModel : ViewModel() {
                     sesionesConNombres.add(sesionState)
                 }
 
-                // Ordenar por fecha de creación
                 val sesionesOrdenadas = sesionesConNombres.sortedByDescending {
                     it.fechaCreacion?.seconds ?: 0
                 }
@@ -204,9 +190,6 @@ class SesionViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Obtiene el nombre de usuario desde la colección "usuarios"
-     */
     private suspend fun getUserName(email: String): String? {
         return try {
             val doc = db.collection("usuarios")
@@ -232,4 +215,3 @@ class SesionViewModel : ViewModel() {
     }
 }
 
-// Data class para la sesión con la nueva estructura

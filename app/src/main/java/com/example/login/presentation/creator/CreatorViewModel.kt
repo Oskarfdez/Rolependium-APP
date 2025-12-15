@@ -121,7 +121,7 @@ class CreatorViewModel: ViewModel() {
             "name" to nombre,
             "class" to clase,
             "hitpoints" to hitpoints,
-            "caracteristicas" to caracteristicasMap, // 👈 Con nombres
+            "caracteristicas" to caracteristicasMap,
             "email" to email,
             "armorClass" to armorClass,
             "proficiencia" to proficiencia,

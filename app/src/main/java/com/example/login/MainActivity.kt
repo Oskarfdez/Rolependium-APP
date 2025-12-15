@@ -24,14 +24,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // ¡IMPORTANTE! Envuelve todo con tu tema personalizado
             LoginTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    // Pantalla de prueba
                     AppNavigation()
+                    //TestThemeScreen()
                 }
             }
         }

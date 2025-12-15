@@ -50,14 +50,12 @@ class SpellsViewModel: ViewModel() {
                     lines.forEach { line ->
                         if (isFirstLine) {
                             isFirstLine = false
-                            return@forEach // Saltar cabecera
+                            return@forEach
                         }
 
-                        // Usar una expresión regular para dividir por comas que no estén dentro de comillas
                         val valores = parseCsvLine(line)
 
                         if (valores.size >= 5) {
-                            // Limpiar las clases: eliminar comillas y espacios extra
                             val clasesLimpias = cleanClassesField(valores[3].trim())
 
                             val spell = SpellsState(
@@ -69,7 +67,6 @@ class SpellsViewModel: ViewModel() {
                             )
                             spells.add(spell)
                         } else if (valores.size >= 4) {
-                            // Caso alternativo si no hay descripción
                             val clasesLimpias = cleanClassesField(valores[3].trim())
 
                             val spell = SpellsState(
@@ -102,18 +99,15 @@ class SpellsViewModel: ViewModel() {
 
             when {
                 c == '"' -> {
-                    // Si estamos dentro de comillas y el siguiente caracter es también una comilla
-                    // (comillas escapadas), agregamos una comilla al valor
                     if (insideQuotes && i + 1 < line.length && line[i + 1] == '"') {
                         current.append('"')
-                        i += 2 // Saltar ambas comillas
+                        i += 2
                         continue
                     } else {
                         insideQuotes = !insideQuotes
                     }
                 }
                 c == ',' && !insideQuotes -> {
-                    // Fin de un campo, agregar al resultado
                     result.add(current.toString())
                     current = StringBuilder()
                 }
@@ -124,7 +118,6 @@ class SpellsViewModel: ViewModel() {
             i++
         }
 
-        // Agregar el último campo
         result.add(current.toString())
 
         return result
@@ -133,18 +126,14 @@ class SpellsViewModel: ViewModel() {
     private fun cleanClassesField(classes: String): String {
         var cleaned = classes.trim()
 
-        // Eliminar comillas al inicio y al final si existen
         if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
             cleaned = cleaned.substring(1, cleaned.length - 1)
         }
 
-        // Eliminar comillas individuales si quedan
         cleaned = cleaned.replace("\"", "")
 
-        // Normalizar espacios después de comas
         cleaned = cleaned.replace("\\s*,\\s*".toRegex(), ", ")
 
-        // Eliminar espacios extra al inicio y final
         cleaned = cleaned.trim()
 
         return cleaned

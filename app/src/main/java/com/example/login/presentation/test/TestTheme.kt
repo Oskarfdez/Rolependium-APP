@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import com.example.login.ui.theme.LoginTheme
 
 @Composable
-fun TestThemeScreen() {
+fun TestThemeScreen() {//ESTA FUNCION YA NO SE USA, LA CREE PARA PROBAR A TIEMPO REAL SI LOS TEMAS SE IMPLEMENTABAN CORRECTAMENTE
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -50,7 +50,6 @@ fun TestThemeScreen() {
             label = { Text("Campo de prueba") }
         )
 
-        // Muestra colores clave
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)

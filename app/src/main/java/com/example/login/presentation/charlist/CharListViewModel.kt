@@ -39,7 +39,6 @@ class CharListViewModel : ViewModel() {
                 .document(id)
                 .delete()
                 .addOnSuccessListener {
-                    // Actualizar la lista local eliminando el personaje
                     personajeList.value = personajeList.value.filter { it.id != id }
                     println("Personaje eliminado exitosamente")
                 }

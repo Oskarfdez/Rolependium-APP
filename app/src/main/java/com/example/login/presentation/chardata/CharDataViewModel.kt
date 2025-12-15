@@ -27,7 +27,6 @@ class CharDataViewModel: ViewModel() {
 
                         val caracteristicas = (doc.get("caracteristicas") as? Map<String, Long>)
                             ?.mapValues { it.value.toInt() } ?: emptyMap()
-
                         val habilidades = (doc.get("habilidades") as? Map<String, Long>)
                             ?.mapValues { it.value.toInt() } ?: emptyMap()
 
